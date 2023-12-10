@@ -13,7 +13,7 @@
 #include "server.hpp"
 
 using namespace libev;
-using namespace db;
+using namespace serv;
 
 Server::Server():
     port { "3993" },
