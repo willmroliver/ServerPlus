@@ -8,7 +8,7 @@
 
 struct GlobalFixture {
     static test::Client<1024> client;
-    static db::Server s;
+    static serv::Server s;
     static std::thread t;
 
     void setup() {
@@ -31,7 +31,7 @@ struct GlobalFixture {
 };
 
 test::Client<1024> GlobalFixture::client { "3993" };
-db::Server GlobalFixture::s { "3993" };
+serv::Server GlobalFixture::s { "3993" };
 std::thread GlobalFixture::t;
 
 BOOST_TEST_GLOBAL_FIXTURE( GlobalFixture );

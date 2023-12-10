@@ -9,7 +9,7 @@
 
 using namespace libev;
 
-namespace db {
+namespace serv {
 
 class Server {
     private:

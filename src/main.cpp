@@ -2,7 +2,7 @@
 #include <event2/event.h>
 
 int main(int argc, char **argv) {
-    db::Server server;
+    serv::Server server;
 
     server.run();
 
