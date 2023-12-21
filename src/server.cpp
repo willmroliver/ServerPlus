@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "server.hpp"
+#include "context.hpp"
 
 using namespace libev;
 using namespace serv;
@@ -39,7 +40,8 @@ int Server::try_listen() {
         exit(EXIT_FAILURE);
     }
 
-    int yes;
+    [[maybe_unused]]
+    auto yes = 1;
 
     for (p = ai; p != nullptr; p = p->ai_next) {
         if ((listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
@@ -103,7 +105,7 @@ void Server::run() {
         if (!gai) std::cout << "server: connection accepted from " << host << " on sock " << fd << std::endl;
         else std::cerr << "getnameinfo: " << gai_strerror(gai) << "\n";
 
-        Server* s = (Server*)arg;
+        // Server* s = (Server*)arg;
     };
 
     listen_event = base.new_event(try_listen(), EV_READ|EV_PERSIST, accept_cb);

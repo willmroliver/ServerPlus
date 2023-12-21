@@ -36,8 +36,6 @@ class Client {
                 exit(EXIT_FAILURE);
             }
 
-            int yes;
-
             for (p = ai; p; p = p->ai_next) {
                 if ((fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
                     perror("socket");
@@ -58,11 +56,12 @@ class Client {
             }
 
             char host[NI_MAXHOST];
-            char serv[NI_MAXSERV];
 
-            if ((gai = getnameinfo(p->ai_addr, p->ai_addrlen, host, NI_MAXHOST, serv, NI_MAXSERV, NI_NUMERICSERV)) == 0) {
-                std::cout << "test client: connected to " << host << " on port " << serv << std::endl;
-            } else std::cerr << "getnameinfo: " << gai_strerror(gai) << std::endl;
+            if ((gai = getnameinfo(p->ai_addr, p->ai_addrlen, host, NI_MAXHOST, nullptr, 0, NI_NUMERICSERV)) == 0) {
+                std::cout << "test client: connected to " << host << std::endl;
+            } else {
+                std::cerr << "getnameinfo: " << gai_strerror(gai) << std::endl;
+            }
 
             freeaddrinfo(ai);
 

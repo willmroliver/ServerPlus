@@ -34,7 +34,7 @@ class Server {
         int try_listen();
 
         /**
-         * Adds a handler to accept connection requests from the socket bound to by try_listen().
+         * Calls try_listen() and adds a persistent event to listen to & accept connections from the bound sock.
          * Then runs the event base loop. The exit status of the loop will be set on the Server.
         */
         void run();
