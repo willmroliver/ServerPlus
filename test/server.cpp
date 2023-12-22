@@ -5,6 +5,7 @@
 #include "server.hpp"
 
 #include <thread>
+#include <iostream>
 
 struct GlobalFixture {
     static test::Client<1024> client;

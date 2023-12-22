@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.28)
 
 project(DB VERSION 1.0)
 
@@ -10,6 +10,8 @@ set(Boost_LIBRARIES ${Boost_INCLUDE_DIRS}/stage/lib)
 set(Boost_USE_STATIC_LIBS ON)
 
 find_package(Boost 1.82.0 COMPONENTS unit_test_framework REQUIRED)
+# find_package(absl REQUIRED)
+# find_package(Protobuf REQUIRED)
 find_package(Libevent REQUIRED)
 find_package(LibeventPlus REQUIRED)
 
@@ -35,6 +37,7 @@ target_include_directories(db_test
     PRIVATE 
         include
         test/include
+        lib/LibeventPlus/include
     PUBLIC 
         ${Boost_INCLUDE_DIRS}
 )
