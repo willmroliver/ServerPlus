@@ -15,7 +15,7 @@ int mock_recvfrom(int socket, void* buffer, size_t length) {
     return length;
 }
 
-int write_cb(char* buff, unsigned n) {
+int write_cb(char* buff, unsigned n, void* data) {
     return mock_recvfrom(4, buff, n);
 }
 
@@ -75,26 +75,28 @@ BOOST_AUTO_TEST_CASE ( buffer_read_table_test ) {
 }
 
 /**
- * @brief Integration test of read & write calls in sequence.
+ * @brief Test read & write calls in sequence.
  * 
  * Expected buffer state is commented. 
  * 
- * '|' indicates the circular buffer 'begin' pointer.
- * '>' indicates the end.
+ * '>' indicates the circular buffer 'begin' pointer.
+ * '|' indicates the end.
  * 
  */
-BOOST_AUTO_TEST_CASE ( buffer_integration_test ) {
+BOOST_AUTO_TEST_CASE ( buffer_read_write_test ) {
     serv::Buffer<16> buffer;
 
     // in buffer: |1234 5678 1234 5678>
     auto [n, can_write] = buffer.write(write_cb, 19);
     BOOST_ASSERT( n == 16 );
     BOOST_ASSERT( !can_write );
+    BOOST_ASSERT( !buffer.bytes_free() );
 
     // in buffer: |> ---- ---- ---- ----
     std::string result = buffer.read(100);
     BOOST_ASSERT( result.size() == 16 );
     BOOST_ASSERT( result == "1234567812345678\0" );
+    BOOST_ASSERT( buffer.bytes_free() == 16 );
 
     // in buffer: |1234 5678 1234> ----
     buffer.write(write_cb, 12);
@@ -102,6 +104,7 @@ BOOST_AUTO_TEST_CASE ( buffer_integration_test ) {
     // in buffer: ---- ---- |1234> ----
     result = buffer.read(8);
     BOOST_ASSERT( result == "12345678\0" );
+    BOOST_ASSERT( buffer.bytes_free() == 12 );
 
     // in buffer: 1234 5678> |1234 1234
     buffer.write(write_cb, 12);
@@ -117,10 +120,12 @@ BOOST_AUTO_TEST_CASE ( buffer_integration_test ) {
     // in buffer: 1234 5678> ---- --|34
     result = buffer.read(6);
     BOOST_ASSERT( result == "123412\0" );
+    BOOST_ASSERT( buffer.bytes_free() == 6 );
 
     // in buffer: 
     result = buffer.read(10);
     BOOST_ASSERT( result == "3412345678\0" );
     BOOST_ASSERT( buffer.empty() );
     BOOST_ASSERT( buffer.can_write() );
+    BOOST_ASSERT( buffer.bytes_free() == 16 );
 }

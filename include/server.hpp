@@ -11,12 +11,14 @@ using namespace libev;
 
 namespace serv {
 
+class Context;
+
 class Server {
     private:
         std::string port;
         evutil_socket_t listener;
         EventBase base;
-        Event* listen_event;
+        std::unordered_map<evutil_socket_t, Event*> pool;
         int status = 0;
 
     public:
@@ -27,31 +29,46 @@ class Server {
         ~Server() = default;
  
         /**
-         * Attempts to bind to a socket to listen from.
+         * @brief Attempts to bind to a socket to listen from.
          * 
-         * \return 0 on failure, or the socket file descriptor
+         * @return int 0 on failure, or the socket file descriptor
          */
         int try_listen();
 
         /**
-         * Calls try_listen() and adds a persistent event to listen to & accept connections from the bound sock.
+         * @brief Calls try_listen() and adds a persistent event to listen to & accept connections from the bound sock.
          * Then runs the event base loop. The exit status of the loop will be set on the Server.
         */
         void run();
 
         /**
-         * Gracefully terminates the event base loop.
+         * @brief Gracefully terminates the event base loop.
         */
         void stop();
-
         /**
-         * Returns the socket file descriptor bound to by try_listen().
+         * @brief Returns the socket file descriptor bound to by try_listen().
          * 
-         * \return The socket on which new connections are listened for.
-        */
+         * @return int The socket on which new connections are listened for.
+         */
         int get_listener_fd() const;
 
         int get_status() const;
+        
+        /**
+         * @brief Adds a read event listener to the server's event base for an accepted connection.
+         * 
+         * @param fd The socket on which the connection was accepted.
+         * @param cb The callback to execute when the socket is ready to read.
+         * @return int 
+         */
+        bool add(evutil_socket_t fd, void (*cb)(Context* c));
+
+        /**
+         * @brief Closes a socket connection and removes it from the pool.
+         * 
+         * @param fd The socket to close.
+         */
+        void remove(evutil_socket_t fd);
 };
 
 }

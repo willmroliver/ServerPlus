@@ -93,7 +93,6 @@ class Client {
                     perror("send");
                     return false;
                 }
-
                 total += bytes_sent;
             }
 

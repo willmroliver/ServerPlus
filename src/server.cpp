@@ -17,13 +17,11 @@ using namespace libev;
 using namespace serv;
 
 Server::Server():
-    port { "3993" },
-    base { EventBase() }
+    port { "3993" }
 {}
 
 Server::Server(std::string port):
-    port { port },
-    base { EventBase() }
+    port { port }
 {}
 
 int Server::try_listen() {
@@ -105,20 +103,29 @@ void Server::run() {
         if (!gai) std::cout << "server: connection accepted from " << host << " on sock " << fd << std::endl;
         else std::cerr << "getnameinfo: " << gai_strerror(gai) << "\n";
 
-        // Server* s = (Server*)arg;
+        Server* s = (Server*)arg;
+        auto success = s->add(fd, [] (Context* c) {
+            auto req = c->get_request();
+            std::cout << "req: " << req << std::endl;
+        });
+
+        if (!success) {
+            s->remove(fd);
+            std::cerr << "server: failed to add connection to event base on sock " << fd << std::endl;
+        }
     };
 
-    listen_event = base.new_event(try_listen(), EV_READ|EV_PERSIST, accept_cb);
+    pool[listener] = base.new_event(try_listen(), EV_READ|EV_PERSIST, accept_cb, this);
 
     std::cout << "server: running on port " << port << ", listening on sock " << listener << std::endl;
-    
-    if (listen_event->add()) status = base.run();
+
+    if (pool[listener]->add()) status = base.run();
     else status = -1;
 }
 
 void Server::stop() {
-    if (listen_event != nullptr) {
-        listen_event->remove();
+    if (pool[listener] != nullptr) {
+        pool[listener]->remove();
 
         if (close(listener) == -1 && errno != EBADF) perror("close");
         listener = 0;
@@ -138,4 +145,28 @@ int Server::get_listener_fd() const {
 
 int Server::get_status() const {
     return status;
+}
+
+bool Server::add(evutil_socket_t fd, void (*cb)(Context* c)) {
+    auto context = new Context(this, fd, cb);
+
+    pool[fd] = base.new_event(fd, EV_READ|EV_PERSIST, [](evutil_socket_t fd, short flags, void* arg) {
+        auto context = (Context*)arg;
+        context->exec();
+    }, context);
+
+    context->set_event(pool[fd]);
+
+    if (!pool[fd]->add()) {
+        std::cerr << "server: failed to add event for sock " << fd << std::endl;
+        remove(fd);
+        return false;
+    }
+
+    return true;
+}
+
+void Server::remove(evutil_socket_t fd) {
+    pool.erase(fd);
+    close(fd);
 }
