@@ -22,17 +22,19 @@ class Buffer {
 
     public:
         Buffer():
-            buff { "" },
-            begin { 0 },
-            end { 0 },
-            full { false }
-        {};
-        Buffer(std::string data):
-            buff { "" },
             begin { 0 },
             end { 0 },
             full { false }
         {
+            std::memset(buff, 0, T + 1);
+        };
+        Buffer(std::string data):
+            begin { 0 },
+            end { 0 },
+            full { false }
+        {   
+            std::memset(buff, 0, T + 1);
+
             for (; begin < data.size() && begin < T; ++begin) {
                 buff[begin] = data[begin];
             }
@@ -43,18 +45,20 @@ class Buffer {
             }
         }
         Buffer(Buffer& b):
-            buff { b.buff },
-            begin { b.begin },
-            end { b.end },
-            full { b.full }
-        {}
-        Buffer(Buffer&& b): 
-            buff { b.buff },
             begin { b.begin },
             end { b.end },
             full { b.full }
         {
+            std::memcpy(buff, b.buff, sizeof(buff));
+        }
+        Buffer(Buffer&& b):
+            begin { b.begin },
+            end { b.end },
+            full { b.full }
+        {
+            std::memcpy(buff, b.buff, sizeof(b.buff));
             b.buff = nullptr;
+
             b.begin = 0;
             b.end = 0;
             b.full = false;
@@ -144,32 +148,40 @@ class Buffer {
          * 
          * @param n The second argument of the callback.
          * 
+         * @param data Additional data can be passed to the callback via this argument.
+         * 
          * @return std::pair<int, bool> The number of bytes written and whether the buffer can still be written to.
          */
-        std::pair<int, bool> write(int cb(char* dest, unsigned n), unsigned n) {
+        std::pair<int, bool> write(int cb(char* dest, unsigned n, void* data), unsigned n, void* data = nullptr) {
             if (!can_write()) return { 0, false };
             if (!n) return { 0, true };
 
             if (begin < end || begin + n < T) {
-                auto res = cb(&buff[begin], n);
+                auto res = cb(&buff[begin], n, data);
                 begin = begin + res;
                 full = begin == end;
 
                 return { res, can_write() };
             } else {
-                auto res1 = cb(&buff[begin], T - begin);
+                auto res1 = cb(&buff[begin], T - begin, data);
                 if (res1 == 0) return { 0, true };
 
-                begin = 0;
+                begin = (begin + res1) % T;
 
+                // We can't loop round as the buffer is full
                 if (begin == end) {
                     full = true;
                     return { res1, false };
+                } 
+                // We didn't read enough bytes to loop round
+                else if (begin != 0) {
+                    return { res1, true };
                 }
 
+                // Else we loop back to the start of the buffer and read again
                 auto remaining = std::min(n - res1, end);
 
-                auto res2 = cb(&buff[begin], remaining);
+                auto res2 = cb(&buff[begin], remaining, data);
                 begin += res2;
 
                 full = begin == end;
@@ -184,6 +196,14 @@ class Buffer {
 
         bool can_write() const {
             return begin != end || !full;
+        }
+
+        unsigned bytes_free() const {
+            if (full) return 0;
+            
+            return begin < end 
+            ? end - begin
+            : T - begin + end;
         }
 };
 

@@ -5,22 +5,49 @@
 #include <event.hpp>
 #include <string>
 
+#include "buffer.hpp"
+
 using namespace libev;
 
 namespace serv {
 
+class Server;
+
 class Context {
     private:
-        EventBase* base;
+        Server* server;
         Event* ev;
-        void (*cb)(Context* c);
+        Buffer<512> buffer;
         std::string request;
+        evutil_socket_t fd;
+
+        void (*cb)(Context* c);
+        int (*buffer_writer)(char* dest, unsigned n, void* data);
 
     public:
-        Context(EventBase* base, Event* ev, void (*cb)(Context* c));
+        Context(Server* s, evutil_socket_t fd, void (*cb)(Context*));
         Context(Context& c) = default;
         Context(Context&& c) = default;
-        ~Context() = default;
+        ~Context();
+
+        void set_event(Event* e);
+
+        /**
+         * @brief Executes the Context callback.
+         */
+        void exec();
+
+        /**
+         * @brief Closes the context's connection and removes it from the server pool.
+         */
+        void end();
+
+        /**
+         * @brief Get the most recent request
+         * 
+         * @return std::string The latest request received
+         */
+        std::string get_request();
 };
 
 };
