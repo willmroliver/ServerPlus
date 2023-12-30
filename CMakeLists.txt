@@ -10,8 +10,8 @@ set(Boost_LIBRARIES ${Boost_INCLUDE_DIRS}/stage/lib)
 set(Boost_USE_STATIC_LIBS ON)
 
 find_package(Boost 1.82.0 COMPONENTS unit_test_framework REQUIRED)
-# find_package(absl REQUIRED)
-# find_package(Protobuf REQUIRED)
+find_package(absl REQUIRED)
+find_package(Protobuf REQUIRED)
 find_package(Libevent REQUIRED)
 find_package(LibeventPlus REQUIRED)
 

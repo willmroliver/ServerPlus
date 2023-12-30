@@ -22,7 +22,7 @@ class Context {
         evutil_socket_t fd;
 
         void (*cb)(Context* c);
-        int (*buffer_writer)(char* dest, unsigned n, void* data);
+        int (*sock_to_buffer)(char* dest, unsigned n, void* data);
 
     public:
         Context(Server* s, evutil_socket_t fd, void (*cb)(Context*));
