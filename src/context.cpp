@@ -13,10 +13,10 @@ Context::Context(Server* s, evutil_socket_t fd, void (*cb)(Context* c)):
     fd { fd },
     cb { cb }
 {
-    buffer_writer = [] (char* dest, unsigned n, void* data) {
+    sock_to_buffer = [] (char* dest, unsigned n, void* data) {
         auto context = (Context*)data;
         auto buffer = context->buffer;
-        
+
         auto nbytes = recvfrom(context->fd, dest, n, 0, nullptr, 0);
 
         if (nbytes <= 0) {
@@ -41,7 +41,8 @@ void Context::set_event(Event* e) {
 }
 
 void Context::exec() {
-    buffer.write(buffer_writer, buffer.bytes_free(), this);
+    buffer.write(sock_to_buffer, buffer.bytes_free(), this);
+    request = buffer.read_to(0);
     cb(this);
 }
 

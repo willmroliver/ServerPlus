@@ -71,12 +71,18 @@ class Buffer {
          * @return std::string The resulting string.
          */
         std::string read() {
-            std::string result;
+            if (empty()) return "";
 
+            std::string result;
+            
             do {
                 result.push_back(buff[end]);
+                buff[end] = 0;
                 end = (end + 1) % T;
-            } while (begin != end);
+            } 
+            while (begin != end);
+
+            full = false;
 
             return result;
         }
@@ -96,12 +102,42 @@ class Buffer {
 
             do {
                 result.push_back(buff[end]);
+                buff[end] = 0;
+
                 end = (end + 1) % T;
                 ++num_read;
-            } while (begin != end && num_read < len);
+            } 
+            while (begin != end && num_read < len);
 
             full = false;
             
+            return result;
+        }
+
+        /**
+         * @brief Reads from the underlying char array into a string and shifts the access pointers accordingly.
+         * 
+         * @param delim A delimiter character to read until.
+         * @return std::string The resulting string.
+         */
+        std::string read_to(char delim) {
+            std::string result;
+
+            if (empty()) return result;
+            char c;
+
+            do {
+                c = buff[end];
+                buff[end] = 0;
+
+                if (c != delim) result.push_back(c);
+                
+                end = (end + 1) % T;
+            }
+            while (begin != end && c != delim);
+
+            full = false;
+
             return result;
         }
 
@@ -115,24 +151,22 @@ class Buffer {
          */
         size_t find(std::string match) const {
             auto n = match.length();
-            if (empty() 
+            if (empty()
                 || (begin < end && end - begin < n) 
                 || (begin > end && (T - begin + end) < n)
+                || n == 0
             ) {
                 return std::string::npos;
             }
 
-            for (auto i = begin; i != end - n; ++i) {
-                if (i == T) i = 0;
-
+            for (auto i = end; (i + n) % T != (begin + 1) % T; i = (i + 1) % T) {
                 auto checking = i;
-
+                
                 for (auto j = 0; j < n; ++j) {
                     if (match[j] != *(buff + checking)) break;
                     if (j == n - 1) return i;
 
-                    ++checking;
-                    if (checking == T) checking = 0;
+                    checking = (checking + 1) % T;
                 }
             }
 
@@ -157,36 +191,36 @@ class Buffer {
             if (!n) return { 0, true };
 
             if (begin < end || begin + n < T) {
-                auto res = cb(&buff[begin], n, data);
-                begin = begin + res;
+                auto bytes_read = cb(&buff[begin], n, data);
+                begin = begin + bytes_read;
                 full = begin == end;
 
-                return { res, can_write() };
+                return { bytes_read, can_write() };
             } else {
-                auto res1 = cb(&buff[begin], T - begin, data);
-                if (res1 == 0) return { 0, true };
+                auto bytes1 = cb(&buff[begin], T - begin, data);
+                if (bytes1 == 0) return { 0, true };
 
-                begin = (begin + res1) % T;
+                begin = (begin + bytes1) % T;
 
                 // We can't loop round as the buffer is full
                 if (begin == end) {
                     full = true;
-                    return { res1, false };
+                    return { bytes1, false };
                 } 
                 // We didn't read enough bytes to loop round
                 else if (begin != 0) {
-                    return { res1, true };
+                    return { bytes1, true };
                 }
 
                 // Else we loop back to the start of the buffer and read again
-                auto remaining = std::min(n - res1, end);
+                auto remaining = std::min(n - bytes1, end);
 
-                auto res2 = cb(&buff[begin], remaining, data);
-                begin += res2;
+                auto bytes2 = cb(&buff[begin], remaining, data);
+                begin += bytes2;
 
                 full = begin == end;
 
-                return { res2 == 0 ? 0 : res1 + res2, can_write() };
+                return { bytes2 == 0 ? 0 : bytes1 + bytes2, can_write() };
             }
         }
 
@@ -200,7 +234,7 @@ class Buffer {
 
         unsigned bytes_free() const {
             if (full) return 0;
-            
+
             return begin < end 
             ? end - begin
             : T - begin + end;

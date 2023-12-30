@@ -37,7 +37,13 @@ std::thread GlobalFixture::t;
 
 BOOST_TEST_GLOBAL_FIXTURE( GlobalFixture );
 
-BOOST_AUTO_TEST_CASE( simple_handler_test, * boost::unit_test::description("test client connects to server") ) {
+BOOST_AUTO_TEST_CASE( connect_and_close_test, * boost::unit_test::description("test client connects to server") ) {
     BOOST_ASSERT(GlobalFixture::client.try_connect());
+    BOOST_ASSERT(GlobalFixture::client.try_close());
+}
+
+BOOST_AUTO_TEST_CASE( send_test, * boost::unit_test::description("test client executes send()") ) {
+    BOOST_ASSERT(GlobalFixture::client.try_connect());
+    BOOST_ASSERT(GlobalFixture::client.try_send("123456789", 10));
     BOOST_ASSERT(GlobalFixture::client.try_close());
 }
