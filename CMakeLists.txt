@@ -37,7 +37,6 @@ target_include_directories(db_test
     PRIVATE 
         include
         test/include
-        lib/LibeventPlus/include
     PUBLIC 
         ${Boost_INCLUDE_DIRS}
 )
