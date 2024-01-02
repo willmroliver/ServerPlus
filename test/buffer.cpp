@@ -189,7 +189,6 @@ FindTestCase find_tests[] = {
 void do_find_test(FindTestCase& test) {
     serv::Buffer<16> buffer;
 
-    // Let's artificially induce an offset in the buffer.
     if (test.offset) {
         offset_buffer<16>(buffer, test.offset);
     }
@@ -269,9 +268,7 @@ void do_read_to_test(ReadToTestCase& test) {
 
     if (result != test.expecting) {
         std::cout 
-        << "buffer_find_table_test failed: reading from '" 
-        << test.initial
-        << " until "
+        << "buffer_find_table_test failed: reading until '"
         << test.delim 
         << "', expecting "
         << test.expecting 
