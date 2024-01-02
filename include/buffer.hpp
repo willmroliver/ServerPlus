@@ -174,7 +174,7 @@ class Buffer {
         }
 
         /**
-         * @brief Calls the callback on the buffer. 
+         * @brief Calls the callback on the buffer. Intended for zero-copy buffer writes. 
          * Manages looping the circular buffer by applying the cb twice if the end is reached and there is space at the beginning.
          * 
          * @param cb A callback taking a char pointer and the number of bytes to write.
@@ -206,7 +206,7 @@ class Buffer {
                 if (begin == end) {
                     full = true;
                     return { bytes1, false };
-                } 
+                }
                 // We didn't read enough bytes to loop round
                 else if (begin != 0) {
                     return { bytes1, true };
