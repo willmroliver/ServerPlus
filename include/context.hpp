@@ -3,11 +3,12 @@
 
 #include <event-base.hpp>
 #include <event.hpp>
+#include <exchange.hpp>
 #include <string>
-
 #include "buffer.hpp"
 
 using namespace libev;
+using namespace crpt;
 
 namespace serv {
 
@@ -18,6 +19,7 @@ class Context {
         Server* server;
         Event* ev;
         Buffer<512> buffer;
+
         std::string request;
         evutil_socket_t fd;
 

@@ -33,7 +33,6 @@ Context::Context(Server* s, evutil_socket_t fd, void (*cb)(Context* c)):
 
 Context::~Context() {
     end();
-    delete ev;
 }
 
 void Context::set_event(Event* e) {
