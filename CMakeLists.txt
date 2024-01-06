@@ -12,8 +12,12 @@ set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.82.0 COMPONENTS unit_test_framework REQUIRED)
 find_package(absl REQUIRED)
 find_package(Protobuf REQUIRED)
+
 find_package(Libevent REQUIRED)
 find_package(LibeventPlus REQUIRED)
+
+find_package(OpenSSL REQUIRED)
+find_package(CryptPlus REQUIRED)
 
 add_library(db_lib "")
 
