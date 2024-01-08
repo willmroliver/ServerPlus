@@ -8,10 +8,9 @@
 using namespace libev;
 using namespace serv;
 
-Context::Context(Server* s, evutil_socket_t fd, void (*cb)(Context* c)):
+Context::Context(Server* s, evutil_socket_t fd):
     server { s },
-    fd { fd },
-    cb { cb }
+    fd { fd }
 {
     sock_to_buffer = [] (char* dest, unsigned n, void* data) {
         auto context = (Context*)data;
@@ -39,10 +38,13 @@ void Context::set_event(Event* e) {
     ev = e;
 }
 
-void Context::exec() {
+bool Context::read_sock() {
     buffer.write(sock_to_buffer, buffer.bytes_free(), this);
-    request = buffer.read_to(0);
-    cb(this);
+
+    auto [result, complete] = buffer.read_to(0);
+    request += result;
+
+    return complete;
 }
 
 void Context::end() {
@@ -51,4 +53,8 @@ void Context::end() {
 
 std::string Context::get_request() {
     return request;
+}
+
+void Context::clear_request() {
+    request = "";
 }

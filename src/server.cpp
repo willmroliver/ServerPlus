@@ -16,6 +16,53 @@
 using namespace libev;
 using namespace serv;
 
+/**
+ * @brief The primary handler for incoming connection attempts
+ */
+event_callback_fn Server::accept_callback = [] (evutil_socket_t listener, short flags, void *arg) {
+    sockaddr_storage their_addr;
+    socklen_t addrlen = sizeof their_addr;
+
+    evutil_socket_t fd;
+
+    if ((fd = accept(listener, (sockaddr*)&their_addr, &addrlen)) == -1) {
+        perror("accept");
+        return;
+    }
+
+    if (evutil_make_socket_nonblocking(fd) == -1) {
+        perror("evutil_make_socket_nonblocking");
+        return;
+    }
+
+    char host[NI_MAXHOST];
+    int gai = getnameinfo((sockaddr*)&their_addr, addrlen, host, sizeof host, nullptr, 0, 0);
+
+    if (!gai) std::cout << "server: connection accepted from " << host << " on sock " << fd << std::endl;
+    else std::cerr << "getnameinfo: " << gai_strerror(gai) << "\n";
+
+    Server* s = (Server*)arg;
+    auto success = s->add(fd);
+
+    if (!success) {
+        s->remove(fd);
+        std::cerr << "server: failed to add connection to event base on sock " << fd << std::endl;
+    }
+};
+
+/**
+ * @brief The primary handler for incoming data events from accepted connections
+ */
+event_callback_fn Server::receive_callback = [] (evutil_socket_t fd, short flags, void* arg) {
+    auto context = (Context*)arg;
+    
+    if (context->read_sock()) {
+        auto req = context->get_request();
+        context->clear_request();
+        // ... handle request
+    }
+};
+
 Server::Server():
     port { "3993" }
 {}
@@ -81,41 +128,7 @@ int Server::try_listen() {
 }
 
 void Server::run() {
-    event_callback_fn accept_cb = [] (evutil_socket_t listener, short flags, void *arg) {
-        sockaddr_storage their_addr;
-        socklen_t addrlen = sizeof their_addr;
-
-        evutil_socket_t fd;
-
-        if ((fd = accept(listener, (sockaddr*)&their_addr, &addrlen)) == -1) {
-            perror("accept");
-            return;
-        }
-
-        if (evutil_make_socket_nonblocking(fd) == -1) {
-            perror("evutil_make_socket_nonblocking");
-            return;
-        }
-
-        char host[NI_MAXHOST];
-        int gai = getnameinfo((sockaddr*)&their_addr, addrlen, host, sizeof host, nullptr, 0, 0);
-
-        if (!gai) std::cout << "server: connection accepted from " << host << " on sock " << fd << std::endl;
-        else std::cerr << "getnameinfo: " << gai_strerror(gai) << "\n";
-
-        Server* s = (Server*)arg;
-        auto success = s->add(fd, [] (Context* c) {
-            auto req = c->get_request();
-            std::cout << "req: " << req << std::endl;
-        });
-
-        if (!success) {
-            s->remove(fd);
-            std::cerr << "server: failed to add connection to event base on sock " << fd << std::endl;
-        }
-    };
-
-    pool[listener] = base.new_event(try_listen(), EV_READ|EV_PERSIST, accept_cb, this);
+    pool[listener] = base.new_event(try_listen(), EV_READ|EV_PERSIST, accept_callback, this);
 
     std::cout << "server: running on port " << port << ", listening on sock " << listener << std::endl;
 
@@ -147,13 +160,10 @@ int Server::get_status() const {
     return status;
 }
 
-bool Server::add(evutil_socket_t fd, void (*cb)(Context* c)) {
-    auto context = new Context(this, fd, cb);
+bool Server::add(evutil_socket_t fd) {
+    auto context = new Context(this, fd);
 
-    pool[fd] = base.new_event(fd, EV_READ|EV_PERSIST, [](evutil_socket_t fd, short flags, void* arg) {
-        auto context = (Context*)arg;
-        context->exec();
-    }, context);
+    pool[fd] = base.new_event(fd, EV_READ|EV_PERSIST, receive_callback, context);
 
     context->set_event(pool[fd]);
 
