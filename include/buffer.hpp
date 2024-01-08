@@ -7,8 +7,7 @@
 namespace serv {
 
 /**
- * @brief A circular buffer providing access to an underlying char array via a write function accepting a callback. 
- * Intended for use with recvfrom (see man recvfrom(2))
+ * @brief A circular buffer providing access to an underlying char array via a write function accepting a callback (allows zero-copy writes).
  * 
  * @tparam T The size of the underlying buffer
  */
@@ -28,6 +27,7 @@ class Buffer {
         {
             std::memset(buff, 0, T + 1);
         };
+
         Buffer(std::string data):
             begin { 0 },
             end { 0 },
@@ -44,6 +44,7 @@ class Buffer {
                 begin = 0;
             }
         }
+
         Buffer(Buffer& b):
             begin { b.begin },
             end { b.end },
@@ -51,18 +52,20 @@ class Buffer {
         {
             std::memcpy(buff, b.buff, sizeof(buff));
         }
+
         Buffer(Buffer&& b):
             begin { b.begin },
             end { b.end },
             full { b.full }
         {
-            std::memcpy(buff, b.buff, sizeof(b.buff));
+            buff = b.buff;
             b.buff = nullptr;
 
             b.begin = 0;
             b.end = 0;
             b.full = false;
         }
+
         ~Buffer() = default;
 
         /**
@@ -117,13 +120,14 @@ class Buffer {
         /**
          * @brief Reads from the underlying char array into a string and shifts the access pointers accordingly.
          * 
-         * @param delim A delimiter character to read until.
-         * @return std::string The resulting string.
+         * @param delim A delimiter character to stop reading at if encountered. If it is not found, the entire buffer content is read.
+         * @return std::pair<std::string, bool> The resulting string & a boolean indicating whether the delimiter was found.
          */
-        std::string read_to(char delim) {
+        std::pair<std::string, bool> read_to(char delim) {
             std::string result;
+            auto found = false;
 
-            if (empty()) return result;
+            if (empty()) return { result, found };
             char c;
 
             do {
@@ -131,6 +135,7 @@ class Buffer {
                 buff[end] = 0;
 
                 if (c != delim) result.push_back(c);
+                else found = true;
                 
                 end = (end + 1) % T;
             }
@@ -138,7 +143,7 @@ class Buffer {
 
             full = false;
 
-            return result;
+            return { result, found };
         }
 
         /**

@@ -1,13 +1,14 @@
-target_sources(db_lib
+target_sources(ServerPlus
     PRIVATE
         server.cpp
         context.cpp
 )
 
-target_link_libraries(db_lib
+target_link_libraries(ServerPlus
+    PRIVATE
+        ProtoInternal
     PUBLIC 
         LibeventPlus
         CryptPlus
+        ${Protobuf_LIBRARIES}
 )
-
-target_link_libraries(db_exec db_lib)

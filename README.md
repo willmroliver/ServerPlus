@@ -2,10 +2,25 @@
 
 ## About
 
-A simple C++ TCP socket server implementation employing a Libevent wrapper for efficient, portable polling. Windows is not currently supported.
+A TCP server solution & custom protocol for creating 'lobbies'. Provides E2E channel encryption with OpenSSL and extensibility via Protobuf classes.
 
-## LibeventPlus
+### Dependencies
 
-The Libevent wrapper is my own. The package is installed as a third-party CMake build.
-See https://github.com/willmroliver/LibeventPlus.
+#### CryptPlus
+
+https://github.com/willmroliver/CryptPlus
+https://www.openssl.org/docs/
+
+Provides Diffie-Hellman / symmetric encryption support via OpenSSL, with some support classes that offer high-level abstractions of basic operations. 
+
+#### LibeventPlus
+
+https://github.com/willmroliver/LibeventPlus
+https://libevent.org/
+
+Wrapper for core functionality of the Libevent API.
+
+#### Protobuf
+
+https://protobuf.dev/
 

@@ -21,6 +21,9 @@ class Server {
         std::unordered_map<evutil_socket_t, Event*> pool;
         int status = 0;
 
+        static event_callback_fn accept_callback;
+        static event_callback_fn receive_callback;
+
     public:
         Server();
         Server(std::string port);
@@ -45,6 +48,7 @@ class Server {
          * @brief Gracefully terminates the event base loop.
         */
         void stop();
+        
         /**
          * @brief Returns the socket file descriptor bound to by try_listen().
          * 
@@ -52,16 +56,20 @@ class Server {
          */
         int get_listener_fd() const;
 
+        /**
+         * @brief Get the error status of the server. 0 indicates no error.
+         * 
+         * @return int 
+         */
         int get_status() const;
         
         /**
          * @brief Adds a read event listener to the server's event base for an accepted connection.
          * 
          * @param fd The socket on which the connection was accepted.
-         * @param cb The callback to execute when the socket is ready to read.
          * @return int 
          */
-        bool add(evutil_socket_t fd, void (*cb)(Context* c));
+        bool add(evutil_socket_t fd);
 
         /**
          * @brief Closes a socket connection and removes it from the pool.

@@ -264,16 +264,13 @@ void do_read_to_test(ReadToTestCase& test) {
         return n;
     },  test.initial.size(), &test);
 
-    auto result = buffer.read_to(test.delim);
+    auto [result, found] = buffer.read_to(test.delim);
 
     if (result != test.expecting) {
         std::cout 
-        << "buffer_find_table_test failed: reading until '"
-        << test.delim 
-        << "', expecting "
-        << test.expecting 
-        << ", got " 
-        << result 
+        << "buffer_find_table_test failed: reading until '" << test.delim 
+        << "', expecting "<< test.expecting 
+        << ", got " << result 
         << std::endl;
     }
 
