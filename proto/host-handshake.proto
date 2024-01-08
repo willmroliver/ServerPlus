@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package server_plus;
+
+message HostHandshake {
+    string public_key = 1;
+    string iv = 2;
+}

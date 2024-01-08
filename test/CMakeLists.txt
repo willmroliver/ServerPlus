@@ -1,13 +1,13 @@
-target_sources(db_test
+target_sources(server_test
     PRIVATE
         main.cpp
         server.cpp
         buffer.cpp
 )
 
-target_link_libraries(db_test
+target_link_libraries(server_test
     PRIVATE
-        db_lib
+        ServerPlus
     PUBLIC 
         ${Boost_LIBRARIES}
         LibeventPlus

@@ -23,11 +23,10 @@ class Context {
         std::string request;
         evutil_socket_t fd;
 
-        void (*cb)(Context* c);
         int (*sock_to_buffer)(char* dest, unsigned n, void* data);
 
     public:
-        Context(Server* s, evutil_socket_t fd, void (*cb)(Context*));
+        Context(Server* s, evutil_socket_t fd);
         Context(Context& c) = default;
         Context(Context&& c) = default;
         ~Context();
@@ -35,9 +34,12 @@ class Context {
         void set_event(Event* e);
 
         /**
-         * @brief Executes the Context callback.
+         * @brief Reads available data from the socket into the Context buffer. 
+         * If a full request is available in the buffer, the data is read from the buffer into the Context request.
+         * 
+         * @return bool Whether or not an entire request has been read.
          */
-        void exec();
+        bool read_sock();
 
         /**
          * @brief Closes the context's connection and removes it from the server pool.
@@ -45,11 +47,16 @@ class Context {
         void end();
 
         /**
-         * @brief Get the most recent request
+         * @brief Get the current request data
          * 
          * @return std::string The latest request received
          */
         std::string get_request();
+
+        /**
+         * @brief Clear the current request data
+         */
+        void clear_request();
 };
 
 };
