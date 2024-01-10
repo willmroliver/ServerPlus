@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package serv.proto;
+
+/* This header should precede all usual requests from a peer to the host */
+message Header {
+
+    /* The name of the proto message following, i.e. 'LoginRequest', 'PeerHandshake' */
+    string type = 1;
+
+    /* The size of the message following, in bytes */
+    int32 size = 2;
+}

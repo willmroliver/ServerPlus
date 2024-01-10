@@ -45,36 +45,13 @@ class Buffer {
             }
         }
 
-        Buffer(Buffer& b):
-            begin { b.begin },
-            end { b.end },
-            full { b.full }
-        {
-            std::memcpy(buff, b.buff, sizeof(buff));
-        }
-
-        Buffer(Buffer&& b):
-            begin { b.begin },
-            end { b.end },
-            full { b.full }
-        {
-            buff = b.buff;
-            b.buff = nullptr;
-
-            b.begin = 0;
-            b.end = 0;
-            b.full = false;
-        }
-
-        ~Buffer() = default;
-
         /**
          * @brief Reads all available data from the underlying char array into a string and shifts the access pointers accordingly.
          * 
          * @return std::string The resulting string.
          */
         std::string read() {
-            if (empty()) return "";
+            if (is_empty()) return "";
 
             std::string result;
             
@@ -99,7 +76,7 @@ class Buffer {
         std::string read(unsigned len) {
             std::string result;
 
-            if (len == 0 || empty()) return result;
+            if (len == 0 || is_empty()) return result;
 
             auto num_read = 0;
 
@@ -127,7 +104,7 @@ class Buffer {
             std::string result;
             auto found = false;
 
-            if (empty()) return { result, found };
+            if (is_empty()) return { result, found };
             char c;
 
             do {
@@ -156,7 +133,8 @@ class Buffer {
          */
         size_t find(std::string match) const {
             auto n = match.length();
-            if (empty()
+
+            if (is_empty()
                 || (begin < end && end - begin < n) 
                 || (begin > end && (T - begin + end) < n)
                 || n == 0
@@ -176,6 +154,30 @@ class Buffer {
             }
 
             return std::string::npos;
+        }
+
+        /**
+         * @brief Tests whether the char exists in the written portion of the buffer.
+         * 
+         * @param match 
+         * @return bool
+         */
+        bool contains(char match) const {            
+            if (is_empty()) {
+                return false;
+            }
+
+            auto i = end;
+
+            do {
+                if (buff[i] == match) {
+                    return true;
+                }
+                i = (i + 1) % T;
+            } 
+            while (i != end);
+
+            return false;
         }
 
         /**
@@ -229,7 +231,7 @@ class Buffer {
             }
         }
 
-        bool empty() const {
+        bool is_empty() const {
             return begin == end && !full;
         }
 
@@ -243,6 +245,13 @@ class Buffer {
             return begin < end 
             ? end - begin
             : T - begin + end;
+        }
+
+        void clear() {
+            std::memset(buff, 0, T + 1);
+            begin = 0;
+            end = 0;
+            full = false;
         }
 };
 

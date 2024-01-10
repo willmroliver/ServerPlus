@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package server_plus;
+package serv.proto;
 
 message PeerHandshake {
     string public_key = 1;

@@ -102,7 +102,7 @@ void do_read_test(ReadTestCase& test) {
 
     std::string result = buffer.read(test.read_size);
     BOOST_ASSERT( result == test.expecting );
-    BOOST_ASSERT( buffer.empty() == test.expecting_empty );
+    BOOST_ASSERT( buffer.is_empty() == test.expecting_empty );
 }
 
 BOOST_AUTO_TEST_CASE ( buffer_read_table_test ) {
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE ( buffer_read_write_test ) {
      * hence the repeated reading of 1234 above.
     */
 
-    BOOST_ASSERT( !buffer.empty() );
+    BOOST_ASSERT( !buffer.is_empty() );
     BOOST_ASSERT( !buffer.can_write() );
 
     // in buffer: 1234 5678> ---- --|34
@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE ( buffer_read_write_test ) {
     // in buffer: 
     result = buffer.read(10);
     BOOST_ASSERT( result == "3412345678\0" );
-    BOOST_ASSERT( buffer.empty() );
+    BOOST_ASSERT( buffer.is_empty() );
     BOOST_ASSERT( buffer.can_write() );
     BOOST_ASSERT( buffer.bytes_free() == 16 );
 }
