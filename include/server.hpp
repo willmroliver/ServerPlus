@@ -6,6 +6,7 @@
 #include <map>
 #include <string>
 #include <memory>
+#include "socket.hpp"
 
 using namespace libev;
 
@@ -16,9 +17,9 @@ class Context;
 class Server {
     private:
         std::string port;
-        evutil_socket_t listener;
+        Socket listen_sock;
         EventBase base;
-        std::unordered_map<evutil_socket_t, Event*> pool;
+        std::unordered_map<evutil_socket_t, Socket*> pool;
         int status = 0;
 
         static event_callback_fn accept_callback;
@@ -62,21 +63,13 @@ class Server {
          * @return int 
          */
         int get_status() const;
-        
-        /**
-         * @brief Adds a read event listener to the server's event base for an accepted connection.
-         * 
-         * @param fd The socket on which the connection was accepted.
-         * @return int 
-         */
-        bool add(evutil_socket_t fd);
 
         /**
-         * @brief Closes a socket connection and removes it from the pool.
+         * @brief Adds a connected socket to the connection pool.
          * 
-         * @param fd The socket to close.
+         * @param sock The socket to add.
          */
-        void remove(evutil_socket_t fd);
+        void add_to_pool(Socket* sock);
 };
 
 }
