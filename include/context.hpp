@@ -1,11 +1,11 @@
 #ifndef INCLUDE_CONTEXT_H
 #define INCLUDE_CONTEXT_H
 
-#include <event-base.hpp>
 #include <event.hpp>
 #include <exchange.hpp>
 #include <string>
 #include "buffer.hpp"
+#include "header.pb.h"
 
 using namespace libev;
 using namespace crpt;
@@ -13,50 +13,41 @@ using namespace crpt;
 namespace serv {
 
 class Server;
+class Socket;
 
 class Context {
     private:
         Server* server;
-        Event* ev;
-        Buffer<512> buffer;
+        Socket* sock;
+        std::string header_data;
+        std::string request_data;
+        proto::Header header;
 
-        std::string request;
-        evutil_socket_t fd;
+        /**
+         * @brief When true, indicates a request header has been successfully parsed from the sock stream
+         */
+        bool header_parsed;
 
-        int (*sock_to_buffer)(char* dest, unsigned n, void* data);
+        /**
+         * @brief If a header has been parsed the complete request data received, processes the request
+         */
+        void handle_request();
+
+        /**
+         * @brief Resets the context, ready to receive the next request
+         */
+        void reset();
 
     public:
-        Context(Server* s, evutil_socket_t fd);
+        Context(Server* server, Socket* sock);
         Context(Context& c) = default;
         Context(Context&& c) = default;
         ~Context();
 
-        void set_event(Event* e);
-
         /**
-         * @brief Reads available data from the socket into the Context buffer. 
-         * If a full request is available in the buffer, the data is read from the buffer into the Context request.
-         * 
-         * @return bool Whether or not an entire request has been read.
+         * @brief Reads available data from the sock stream, then attempts to parse a header and request from the contents of the socket buffer
          */
-        bool read_sock();
-
-        /**
-         * @brief Closes the context's connection and removes it from the server pool.
-         */
-        void end();
-
-        /**
-         * @brief Get the current request data
-         * 
-         * @return std::string The latest request received
-         */
-        std::string get_request();
-
-        /**
-         * @brief Clear the current request data
-         */
-        void clear_request();
+        void handle_read_event();
 };
 
 };

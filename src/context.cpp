@@ -8,53 +8,58 @@
 using namespace libev;
 using namespace serv;
 
-Context::Context(Server* s, evutil_socket_t fd):
-    server { s },
-    fd { fd }
-{
-    sock_to_buffer = [] (char* dest, unsigned n, void* data) {
-        auto context = (Context*)data;
-        auto buffer = context->buffer;
+Context::Context(Server* server, Socket* sock):
+    server { server },
+    sock { sock }
+{}
 
-        auto nbytes = recvfrom(context->fd, dest, n, 0, nullptr, 0);
+void Context::handle_request() {
 
-        if (nbytes <= 0) {
-            if (nbytes == -1) perror("context: recvfrom");
-            else std::cout << "context: peer closed connection on sock " << context->fd << std::endl;
-            context->end();
+}
 
-            return 0;
+void Context::reset() {
+    header_data = "";
+    header_parsed = false;
+}
+
+void Context::handle_read_event() {
+    auto [nbytes, full] = sock->try_recv();
+
+    if (nbytes <= 0) return;
+
+    if (header_parsed) {
+        request_data = sock->retrieve_data();
+
+        if (request_data.size()) {
+            handle_request();
+            reset();
+            return;
         }
 
-        return (int)nbytes;
-    };
-}
+        if (full) {
+            // send error
+            sock->clear_buffer();
+            reset();
+            return;
+        }
+    }
+    
+    header_data = sock->retrieve_data();
 
-Context::~Context() {
-    end();
-}
+    if (header_data.size()) {
+        if (!header.ParseFromString(header_data)) {
+            // send error
+            reset();
+            return;
+        }
 
-void Context::set_event(Event* e) {
-    ev = e;
-}
-
-bool Context::read_sock() {
-    buffer.write(sock_to_buffer, buffer.bytes_free(), this);
-
-    auto [result, complete] = buffer.read_to(0);
-    request += result;
-
-    return complete;
-}
-
-void Context::end() {
-    server->remove(fd);
-}
-
-std::string Context::get_request() {
-    return request;
-}
-
-void Context::clear_request() {
-    request = "";
+        header_parsed = true;
+        return;        
+    }
+    
+    if (full) {
+        // send error
+        sock->clear_buffer();
+        reset();
+    }
 }

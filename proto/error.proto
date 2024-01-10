@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package serv.proto;
+
+message Error {
+    int32 code = 1;
+    string description = 2;
+}
