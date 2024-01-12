@@ -5,6 +5,7 @@
 #include <exchange.hpp>
 #include <string>
 #include "buffer.hpp"
+#include "socket.hpp"
 #include "header.pb.h"
 
 using namespace libev;
@@ -13,15 +14,16 @@ using namespace crpt;
 namespace serv {
 
 class Server;
-class Socket;
 
 class Context {
     private:
         Server* server;
-        Socket* sock;
+        Socket sock;
+        Event event;
         std::string header_data;
         std::string request_data;
         proto::Header header;
+        static event_callback_fn receive_callback;
 
         /**
          * @brief When true, indicates a request header has been successfully parsed from the sock stream
@@ -40,14 +42,18 @@ class Context {
 
     public:
         Context(Server* server, Socket* sock);
-        Context(Context& c) = default;
-        Context(Context&& c) = default;
-        ~Context();
 
         /**
          * @brief Reads available data from the sock stream, then attempts to parse a header and request from the contents of the socket buffer
          */
         void handle_read_event();
+
+        /**
+         * @brief Get a pointer to the socket whose connection this context manages.
+         * 
+         * @return Socket*
+         */
+        Socket* const get_sock();
 };
 
 };

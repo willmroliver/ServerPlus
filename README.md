@@ -24,3 +24,4 @@ Wrapper for core functionality of the Libevent API.
 
 https://protobuf.dev/
 
+Protobuf offers 'reflection' capabilities on its models; we'll be using these to build in generic features to the server, so that new data-types for storage/communication can be created on-the-fly by users.
