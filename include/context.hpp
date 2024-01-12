@@ -2,8 +2,9 @@
 #define INCLUDE_CONTEXT_H
 
 #include <event.hpp>
-#include <exchange.hpp>
+#include <crypt/exchange.hpp>
 #include <string>
+#include <memory>
 #include "buffer.hpp"
 #include "socket.hpp"
 #include "header.pb.h"
@@ -18,8 +19,9 @@ class Server;
 class Context {
     private:
         Server* server;
-        Socket sock;
+        std::shared_ptr<Socket> sock;
         Event event;
+
         std::string header_data;
         std::string request_data;
         proto::Header header;
@@ -41,7 +43,7 @@ class Context {
         void reset();
 
     public:
-        Context(Server* server, Socket* sock);
+        Context(Server* server, std::shared_ptr<Socket>& sock);
 
         /**
          * @brief Reads available data from the sock stream, then attempts to parse a header and request from the contents of the socket buffer
@@ -51,9 +53,9 @@ class Context {
         /**
          * @brief Get a pointer to the socket whose connection this context manages.
          * 
-         * @return Socket*
+         * @return std::shared_ptr<Socket>
          */
-        Socket* const get_sock();
+        const std::shared_ptr<Socket> get_sock() const;
 };
 
 };
