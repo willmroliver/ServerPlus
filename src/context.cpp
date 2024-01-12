@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <iostream>
+#include <thread>
 
 #include "context.hpp"
 #include "server.hpp"
@@ -13,7 +14,14 @@ using namespace serv;
  */
 event_callback_fn Context::receive_callback = [] (evutil_socket_t fd, short flags, void* arg) {
     auto ctx = (Context*)arg;
-    ctx->handle_read_event();
+
+    auto execute_cb = [&ctx] () {
+        ctx->handle_read_event();
+    };
+
+    auto thread = std::thread(execute_cb);
+    thread.detach();
+    
 };
 
 Context::Context(Server* server, Socket* sock):
