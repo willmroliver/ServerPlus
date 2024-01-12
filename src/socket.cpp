@@ -14,7 +14,6 @@ Socket::Socket():
 }
 
 Socket::~Socket() {
-    std::cout << "server: closing sock " << fd << std::endl;
     close(fd);
 }
 
