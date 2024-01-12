@@ -57,9 +57,7 @@ class Client {
 
             char host[NI_MAXHOST];
 
-            if ((gai = getnameinfo(p->ai_addr, p->ai_addrlen, host, NI_MAXHOST, nullptr, 0, NI_NUMERICSERV)) == 0) {
-                std::cout << "test client: connected to " << host << std::endl;
-            } else {
+            if ((gai = getnameinfo(p->ai_addr, p->ai_addrlen, host, NI_MAXHOST, nullptr, 0, NI_NUMERICSERV)) != 0) {
                 std::cerr << "getnameinfo: " << gai_strerror(gai) << std::endl;
             }
 
@@ -80,8 +78,14 @@ class Client {
             return true;
         }
 
-        bool try_send(const std::string req, const size_t len) const {
-            if (!fd) return false;
+        bool try_send(const std::string req, size_t len = 0) const {
+            if (!fd) {
+                return false;
+            }
+
+            if (len == 0) {
+                len = req.size() + 1;
+            }
             
             const char* data = req.c_str();
 
@@ -99,24 +103,22 @@ class Client {
             return true;
         }
 
-        bool try_recv(std::string &res, int &len) const {
-            if (!fd) return false;
+        std::string try_recv() const {
+            if (!fd) return "";
 
             char buf[BUF_SIZE];
+            unsigned len;
             
             if ((len = recvfrom(fd, buf, BUF_SIZE, 0, nullptr, 0)) == -1) {
                 perror("recvfrom");
-                return false;
+                return "";
             } 
             if (len == 0) {
                 std::cout << "client: peer closed connection" << std::endl;
-                return true;
+                return "";
             }
 
-            res.clear();
-            for (auto c : buf) res.push_back(c);
-
-            return true;
+            return { buf, len };
         }
 
         const evutil_socket_t get_fd() const {

@@ -10,4 +10,7 @@ message Header {
 
     /* The size of the message following, in bytes */
     int32 size = 2;
+
+    /* The milliseconds since epoch at which the header was sent */
+    optional uint64 timestamp = 3;
 }

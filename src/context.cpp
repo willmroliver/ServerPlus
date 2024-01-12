@@ -8,10 +8,23 @@
 using namespace libev;
 using namespace serv;
 
+/**
+ * @brief The primary handler for incoming data events from accepted connections
+ */
+event_callback_fn Context::receive_callback = [] (evutil_socket_t fd, short flags, void* arg) {
+    auto ctx = (Context*)arg;
+    ctx->handle_read_event();
+};
+
 Context::Context(Server* server, Socket* sock):
     server { server },
-    sock { sock }
-{}
+    sock { *sock },
+    event { server->get_base()->new_event(sock->get_fd(), EV_READ|EV_PERSIST, receive_callback, this) }
+{
+    if (!event.add()) {
+        server->get_base()->dump_status();
+    }
+}
 
 void Context::handle_request() {
 
@@ -23,12 +36,12 @@ void Context::reset() {
 }
 
 void Context::handle_read_event() {
-    auto [nbytes, full] = sock->try_recv();
+    auto [nbytes, full] = sock.try_recv();
 
     if (nbytes <= 0) return;
 
     if (header_parsed) {
-        request_data = sock->retrieve_data();
+        request_data = sock.retrieve_data();
 
         if (request_data.size()) {
             handle_request();
@@ -38,17 +51,26 @@ void Context::handle_read_event() {
 
         if (full) {
             // send error
-            sock->clear_buffer();
+            sock.clear_buffer();
             reset();
             return;
         }
     }
     
-    header_data = sock->retrieve_data();
+    header_data = sock.retrieve_data();
 
     if (header_data.size()) {
         if (!header.ParseFromString(header_data)) {
             // send error
+            reset();
+            return;
+        }
+
+        if (header.type() == "ping") {
+            if (!sock.try_send(header_data)) {
+                // error
+            }
+
             reset();
             return;
         }
@@ -59,7 +81,11 @@ void Context::handle_read_event() {
     
     if (full) {
         // send error
-        sock->clear_buffer();
+        sock.clear_buffer();
         reset();
     }
+}
+
+Socket* const Context::get_sock() {
+    return &sock;
 }
