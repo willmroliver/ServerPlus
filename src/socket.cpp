@@ -14,6 +14,7 @@ Socket::Socket():
 }
 
 Socket::~Socket() {
+    std::cout << "server: closing sock " << fd << std::endl;
     close(fd);
 }
 
@@ -81,7 +82,7 @@ bool Socket::try_listen(std::string port) {
 }
 
 bool Socket::try_accept(Socket* socket) {
-    if (!listening) return false;
+    if (!listening || socket == nullptr || socket->get_fd() > 0) return false;
     
     evutil_socket_t sock_fd;
     sockaddr_storage sock_addr;
@@ -93,15 +94,8 @@ bool Socket::try_accept(Socket* socket) {
         return false;
     }
 
-    if (evutil_make_socket_nonblocking(fd) == -1) {
+    if (evutil_make_socket_nonblocking(sock_fd) == -1) {
         perror("evutil_make_socket_nonblocking");
-        return false;
-    }
-
-    if (socket == nullptr) {
-        socket = new Socket;
-    }
-    else if (socket->fd != 0) {
         return false;
     }
 
@@ -120,6 +114,7 @@ std::string Socket::get_host() const {
         return host;
     }
 
+    std::cerr << "getnameinfo: " << gai_strerror(gai) << std::endl;
     return "";
 }
 
@@ -141,8 +136,12 @@ std::pair<int, bool> Socket::try_recv() {
         auto nbytes = recvfrom(socket->get_fd(), dest, n, 0, nullptr, 0);
 
         if (nbytes <= 0) {
-            if (nbytes == -1) perror("context: recvfrom");
-            else std::cout << "context: peer closed connection on sock " << socket->get_fd() << std::endl;
+            if (nbytes == -1) {
+                perror("context: recvfrom");
+            }
+            else {
+                std::cout << "context: peer closed connection on sock " << socket->get_fd() << std::endl;
+            }
             
             socket->close_fd();
             return 0;
@@ -175,7 +174,8 @@ bool Socket::try_send(std::string data) {
 
 std::string Socket::retrieve_data(char delim) {
     if (buf.contains(delim)) {
-        buf.read_to(delim);
+        auto [res, found] = buf.read_to(delim);
+        return res;
     }
 
     return "";
@@ -183,8 +183,4 @@ std::string Socket::retrieve_data(char delim) {
 
 void Socket::clear_buffer() {
     buf.clear();
-}
-
-void Socket::set_read_event(Event&& event) {
-    read_event = std::make_unique<Event>(std::move(event));
 }

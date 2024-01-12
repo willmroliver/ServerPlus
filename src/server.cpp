@@ -9,6 +9,7 @@
 #include <event-base.hpp>
 #include <utility>
 #include <iostream>
+#include <thread>
 
 #include "server.hpp"
 #include "context.hpp"
@@ -20,23 +21,7 @@ using namespace serv;
  * @brief The primary handler for incoming connection attempts
  */
 event_callback_fn Server::accept_callback = [] (evutil_socket_t listener, short flags, void *arg) {
-    Server* s = (Server*)arg;
-    Socket* sock = nullptr;
-    
-    auto success = s->listen_sock.try_accept(sock);
-
-    if (!success) {
-        std::cerr << "server: failed to add connection to event base on sock " << sock->get_fd() << std::endl;
-        return;
-    }
-};
-
-/**
- * @brief The primary handler for incoming data events from accepted connections
- */
-event_callback_fn Server::receive_callback = [] (evutil_socket_t fd, short flags, void* arg) {
-    auto context = (Context*)arg;
-    context->handle_read_event();
+    ((Server*)arg)->accept_connection();
 };
 
 Server::Server():
@@ -46,6 +31,12 @@ Server::Server():
 Server::Server(std::string port):
     port { port }
 {}
+
+Server::~Server() {
+    for (auto it = ctx_pool.begin(); it != ctx_pool.end(); ++it) {
+        delete it->second;
+    }
+}
 
 void Server::run() {
     if (!listen_sock.try_listen(port)) {
@@ -65,6 +56,19 @@ void Server::run() {
     status = base.run();
 }
 
+void Server::accept_connection() {
+    auto sock = new Socket;
+
+    if (!listen_sock.try_accept(sock)) {
+        std::cerr << "server: failed to add connection to event base on sock " << sock->get_fd() << std::endl;
+        return;
+    }
+
+    auto context = new Context(this, sock);
+
+    ctx_pool[sock->get_fd()] = context;
+}
+
 void Server::stop() {
     if (base.loopexit()) status = 0;
     else status = -1;
@@ -72,10 +76,10 @@ void Server::stop() {
     std::cout << "server: stopped with status " << status << std::endl;
 }
 
-int Server::get_status() const {
-    return status;
+EventBase* const Server::get_base() {
+    return &base;
 }
 
-void Server::add_to_pool(Socket* sock) {
-    pool[sock->get_fd()] = sock;
+int Server::get_status() const {
+    return status;
 }

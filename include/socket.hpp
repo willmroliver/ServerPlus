@@ -23,13 +23,12 @@ class Socket {
         sockaddr_storage addr;
         socklen_t addr_len;
         Buffer<1024> buf;
-        std::unique_ptr<Event> read_event;
     
     public:
         Socket();
-        Socket(Socket& sock) = delete;
+        Socket(Socket& sock) = default;
         Socket(Socket&& sock) = default;
-        Socket& operator=(Socket& sock) = delete;
+        Socket& operator=(Socket& sock) = default;
         Socket& operator=(Socket&& sock) = default;
         ~Socket();
 
@@ -116,11 +115,6 @@ class Socket {
          * @brief Clears the socket buffer.
          */
         void clear_buffer();
-
-        /**
-         * @brief Set the socket's read_event. Usually this is a recurring Event that handles incoming data for this sock.
-         */
-        void set_read_event(Event&& event);
 };
 
 }
