@@ -80,8 +80,8 @@ bool Socket::try_listen(std::string port) {
     return try_listen(port, AF_UNSPEC, SOCK_STREAM, AI_PASSIVE);
 }
 
-bool Socket::try_accept(Socket* socket) {
-    if (!listening || socket == nullptr || socket->get_fd() > 0) return false;
+bool Socket::try_accept(Socket& socket) {
+    if (!listening || socket.get_fd() > 0) return false;
     
     evutil_socket_t sock_fd;
     sockaddr_storage sock_addr;
@@ -98,9 +98,9 @@ bool Socket::try_accept(Socket* socket) {
         return false;
     }
 
-    socket->fd = sock_fd;
-    socket->addr = sock_addr;
-    socket->addr_len = sock_addr_len;
+    socket.fd = sock_fd;
+    socket.addr = sock_addr;
+    socket.addr_len = sock_addr_len;
 
     return true;
 }

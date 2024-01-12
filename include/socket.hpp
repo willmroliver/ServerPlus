@@ -14,7 +14,8 @@ using namespace libev;
 namespace serv {
 
 /**
- * @brief Manages a Berkeley socket. [This should really have been encapsulated in its own wrapper library, but it works]
+ * @brief Manages a Berkeley socket. 
+ * [This should probably have been encapsulated in its own wrapper library, but it works, and there's not much memory-management going on]
  */
 class Socket {
     private: 
@@ -62,7 +63,7 @@ class Socket {
          * 
          * @return bool The success or failure of the call to accept().
          */
-        bool try_accept(Socket* socket);
+        bool try_accept(Socket& socket);
 
         /**
          * @brief Returns address host information, if the socket is managing an accepted connection.

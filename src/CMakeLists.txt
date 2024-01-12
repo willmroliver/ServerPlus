@@ -1,6 +1,7 @@
 target_sources(ServerPlus
     PRIVATE
-        server.cpp
         context.cpp
+        secure-socket.cpp
+        server.cpp
         socket.cpp
 )
