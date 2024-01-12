@@ -57,9 +57,9 @@ void Server::run() {
 }
 
 void Server::accept_connection() {
-    auto sock = new Socket;
+    auto sock = std::make_shared<Socket>();
 
-    if (!listen_sock.try_accept(sock)) {
+    if (!listen_sock.try_accept(*sock)) {
         std::cerr << "server: failed to add connection to event base on sock " << sock->get_fd() << std::endl;
         return;
     }
