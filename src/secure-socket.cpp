@@ -113,7 +113,7 @@ bool SecureSocket::try_send(std::string data) {
         return false;
     }
 
-    return sock->try_send(plain_text);
+    return sock->try_send(cipher_text);
 }
 
 std::vector<char> SecureSocket::retrieve_data(char delim) {
