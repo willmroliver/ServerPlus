@@ -127,8 +127,12 @@ bool Socket::close_fd() {
     return (status == 0);
 }
 
+std::pair<int, bool> Socket::try_recv(int (*write_cb) (char* dest, unsigned n, void* data), void* arg) {
+    return buf.write(write_cb, buf.bytes_free(), arg);
+}
+
 std::pair<int, bool> Socket::try_recv() {
-    return buf.write([] (char* dest, unsigned n, void* data) {
+    return try_recv([] (char* dest, unsigned n, void* data) {
         auto socket = (Socket*)data;
         auto buffer = socket->buf;
 
@@ -147,7 +151,7 @@ std::pair<int, bool> Socket::try_recv() {
         }
 
         return static_cast<int>(nbytes);
-    }, buf.bytes_free(), this);
+    }, this);
 }
 
 bool Socket::try_send(std::string data) {
@@ -171,13 +175,43 @@ bool Socket::try_send(std::string data) {
     return true;
 }
 
-std::string Socket::retrieve_data(char delim) {
+bool Socket::try_send(std::vector<char> data) {
+    if (!fd || listening) return false;
+            
+    auto bytes = data.data();
+    auto len = data.size();
+
+    auto bytes_sent = 0;
+    auto total = 0;
+
+    while (total < len) {
+        if ((bytes_sent = send(fd, bytes + total, len - total, 0)) == -1) {
+            // send error
+            return false;
+        }
+
+        total += bytes_sent;
+    }
+
+    return true;
+}
+
+std::vector<char> Socket::retrieve_data(char delim) {
     if (buf.contains(delim)) {
         auto [res, found] = buf.read_to(delim);
         return res;
     }
 
-    return "";
+    return {};
+}
+
+std::string Socket::retrieve_message() {
+    auto data = retrieve_data(0);
+    return { data.begin(), data.end() };
+}
+
+std::vector<char> Socket::flush_buffer() {
+    return buf.read();
 }
 
 void Socket::clear_buffer() {

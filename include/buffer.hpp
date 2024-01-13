@@ -28,6 +28,23 @@ class Buffer {
             std::memset(buff, 0, T + 1);
         };
 
+        Buffer(std::vector<char> data):
+            begin { 0 },
+            end { 0 },
+            full { false }
+        {   
+            std::memset(buff, 0, T + 1);
+
+            for (; begin < data.size() && begin < T; ++begin) {
+                buff[begin] = data[begin];
+            }
+
+            if (data.size() == T) {
+                full = true;
+                begin = 0;
+            }
+        }
+
         Buffer(std::string data):
             begin { 0 },
             end { 0 },
@@ -50,10 +67,12 @@ class Buffer {
          * 
          * @return std::string The resulting string.
          */
-        std::string read() {
-            if (is_empty()) return "";
+        std::vector<char> read() {
+            if (is_empty()) {
+                return {};
+            }
 
-            std::string result;
+            std::vector<char> result;
             
             do {
                 result.push_back(buff[end]);
@@ -73,8 +92,8 @@ class Buffer {
          * @param len The max number of bytes to read. Will ignore any requested bytes greater than present in the array.
          * @return std::string The resulting string.
          */
-        std::string read(unsigned len) {
-            std::string result;
+        std::vector<char> read(unsigned len) {
+            std::vector<char> result;
 
             if (len == 0 || is_empty()) return result;
 
@@ -100,8 +119,8 @@ class Buffer {
          * @param delim A delimiter character to stop reading at if encountered. If it is not found, the entire buffer content is read.
          * @return std::pair<std::string, bool> The resulting string & a boolean indicating whether the delimiter was found.
          */
-        std::pair<std::string, bool> read_to(char delim) {
-            std::string result;
+        std::pair<std::vector<char>, bool> read_to(char delim) {
+            std::vector<char> result;
             auto found = false;
 
             if (is_empty()) return { result, found };
@@ -178,6 +197,25 @@ class Buffer {
             while (i != end);
 
             return false;
+        }
+
+        /**
+         * @brief Copies the data passed into the buffer. If data size exceeds buffer space, no data is copied.
+         * 
+         * @param data The data to write copy into the buffer.
+         * @return std::pair<int, bool> 
+         */
+        bool write(std::vector<char> data) {
+            if (bytes_free() < data.size()) {
+                return false;
+            }
+
+            for (auto i = 0; i < data.size(); ++i) {
+                buff[begin] = data[i];
+                begin = begin + 1 % T;
+            }
+
+            return true;
         }
 
         /**
