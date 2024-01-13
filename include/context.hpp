@@ -6,7 +6,7 @@
 #include <string>
 #include <memory>
 #include "buffer.hpp"
-#include "socket.hpp"
+#include "secure-socket.hpp"
 #include "header.pb.h"
 
 using namespace libev;
@@ -19,13 +19,15 @@ class Server;
 class Context {
     private:
         Server* server;
-        std::shared_ptr<Socket> sock;
+        SecureSocket sock;
         Event event;
 
         std::string header_data;
         std::string request_data;
         proto::Header header;
+
         static event_callback_fn receive_callback;
+        static event_callback_fn handshake_callback;
 
         /**
          * @brief When true, indicates a request header has been successfully parsed from the sock stream
@@ -49,13 +51,6 @@ class Context {
          * @brief Reads available data from the sock stream, then attempts to parse a header and request from the contents of the socket buffer
          */
         void handle_read_event();
-
-        /**
-         * @brief Get a pointer to the socket whose connection this context manages.
-         * 
-         * @return std::shared_ptr<Socket>
-         */
-        const std::shared_ptr<Socket> get_sock() const;
 };
 
 };

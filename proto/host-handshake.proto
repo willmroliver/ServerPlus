@@ -3,6 +3,6 @@ syntax = "proto3";
 package serv.proto;
 
 message HostHandshake {
-    string public_key = 1;
-    string iv = 2;
+    bytes public_key = 1;
+    bytes iv = 2;
 }

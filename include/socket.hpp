@@ -83,6 +83,16 @@ class Socket {
          * @brief Attempts to read available data from the socket stream into a buffer.
          * See man recvfrom
          * 
+         * @param write_cb The callback to pass to the buffer's write function. See Buffer<T>::write()
+         * @param arg The arg to pass in for access within the callback
+         * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the socket's buffer is full.
+         */
+        std::pair<int, bool> try_recv(int (*write_cb) (char* dest, unsigned n, void* data), void* arg);
+
+        /**
+         * @brief Attempts to read available data from the socket stream into a buffer. Uses a default zero-copy callback to write to the buffer
+         * See man recvfrom
+         * 
          * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the socket's buffer is full.
          */
         std::pair<int, bool> try_recv();
@@ -90,10 +100,20 @@ class Socket {
         /**
          * @brief Attempts to send the bytes stored in data over the network.
          * See man send
-         * 
+         *
+         * @param data The data to send 
          * @return bool The success or failure of the attempt to send all the data. 
          */
         bool try_send(std::string data);
+
+        /**
+         * @brief Attempts to send the bytes stored in data over the network.
+         * See man send
+         * 
+         * @param data The data to send
+         * @return bool The success or failure of the attempt to send all the data. 
+         */
+        bool try_send(std::vector<char> data);
 
         /**
          * @brief Retrieves data from the buffer (FIFO) up to the first instance of delim.
@@ -101,19 +121,24 @@ class Socket {
          * @param delim A character (delimiting between blocks of data).
          * @return std::string The message, or an empty string if delim is not found.
          */
-        std::string retrieve_data(char delim);
+        std::vector<char> retrieve_data(char delim);
 
         /**
          * @brief Retrieves data from the buffer (FIFO) up to the first null-terminator.
          * 
          * @return std::string The message, or an empty string if a null-terminator is not found.
          */
-        inline std::string retrieve_data() {
-            return retrieve_data(0);
-        };
+        std::string retrieve_message();
 
         /**
-         * @brief Clears the socket buffer.
+         * @brief Empties and returns the entire content of the buffer.
+         * 
+         * @return std::string 
+         */
+        std::vector<char> flush_buffer();
+
+        /**
+         * @brief Clears the socket buffer memory and resets internal state.
          */
         void clear_buffer();
 };

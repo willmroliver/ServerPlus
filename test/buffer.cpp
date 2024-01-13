@@ -100,7 +100,9 @@ ReadTestCase read_tests[] = {
 void do_read_test(ReadTestCase& test) {
     serv::Buffer<16> buffer (test.initial);
 
-    std::string result = buffer.read(test.read_size);
+    auto res_bytes = buffer.read(test.read_size);
+    std::string result { res_bytes.begin(), res_bytes.end() };
+
     BOOST_ASSERT( result == test.expecting );
     BOOST_ASSERT( buffer.is_empty() == test.expecting_empty );
 }
@@ -128,7 +130,9 @@ BOOST_AUTO_TEST_CASE ( buffer_read_write_test ) {
     BOOST_ASSERT( !buffer.bytes_free() );
 
     // in buffer: |>---- ---- ---- ----
-    std::string result = buffer.read(100);
+    auto res_bytes = buffer.read(100);
+    std::string result = { res_bytes.begin(), res_bytes.end() };
+
     BOOST_ASSERT( result.size() == 16 );
     BOOST_ASSERT( result == "1234567812345678\0" );
     BOOST_ASSERT( buffer.bytes_free() == 16 );
@@ -137,7 +141,9 @@ BOOST_AUTO_TEST_CASE ( buffer_read_write_test ) {
     buffer.write(write_cb, 12);
     
     // in buffer: ---- ---- |1234> ----
-    result = buffer.read(8);
+    res_bytes = buffer.read(8);
+    result = { res_bytes.begin(), res_bytes.end() };
+
     BOOST_ASSERT( result == "12345678\0" );
     BOOST_ASSERT( buffer.bytes_free() == 12 );
 
@@ -153,12 +159,16 @@ BOOST_AUTO_TEST_CASE ( buffer_read_write_test ) {
     BOOST_ASSERT( !buffer.can_write() );
 
     // in buffer: 1234 5678> ---- --|34
-    result = buffer.read(6);
+    res_bytes = buffer.read(6);
+    result = { res_bytes.begin(), res_bytes.end() };
+
     BOOST_ASSERT( result == "123412\0" );
     BOOST_ASSERT( buffer.bytes_free() == 6 );
 
     // in buffer: 
-    result = buffer.read(10);
+    res_bytes = buffer.read(10);
+    result = { res_bytes.begin(), res_bytes.end() };
+
     BOOST_ASSERT( result == "3412345678\0" );
     BOOST_ASSERT( buffer.is_empty() );
     BOOST_ASSERT( buffer.can_write() );
@@ -264,7 +274,8 @@ void do_read_to_test(ReadToTestCase& test) {
         return n;
     },  test.initial.size(), &test);
 
-    auto [result, found] = buffer.read_to(test.delim);
+    auto [res_bytes, found] = buffer.read_to(test.delim);
+    std::string result { res_bytes.begin(), res_bytes.end() };
 
     if (result != test.expecting) {
         std::cout 

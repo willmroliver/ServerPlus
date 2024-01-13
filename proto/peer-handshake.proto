@@ -3,5 +3,5 @@ syntax = "proto3";
 package serv.proto;
 
 message PeerHandshake {
-    string public_key = 1;
+    bytes public_key = 1;
 }
