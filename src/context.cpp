@@ -12,6 +12,9 @@ using namespace serv;
  */
 event_callback_fn Context::receive_callback = [] (evutil_socket_t fd, short flags, void* arg) {
     auto ctx = static_cast<Context*>(arg);
+    if (ctx == nullptr) {
+        return;
+    }
 
     auto execute_cb = [&ctx] () {
         ctx->handle_read_event();
@@ -24,6 +27,9 @@ event_callback_fn Context::receive_callback = [] (evutil_socket_t fd, short flag
 
 event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short flags, void* arg) {
     auto ctx = static_cast<Context*>(arg);
+    if (ctx == nullptr) {
+        return;
+    }
 
     if (ctx->sock.handshake_final()) {
         ctx->event = ctx->server->get_base()->new_event(ctx->sock.get_sock()->get_fd(), EV_READ, receive_callback, ctx);

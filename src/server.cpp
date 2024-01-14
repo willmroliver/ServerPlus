@@ -33,9 +33,6 @@ Server::Server(std::string port):
 {}
 
 Server::~Server() {
-    for (auto it = ctx_pool.begin(); it != ctx_pool.end(); ++it) {
-        delete it->second;
-    }
 }
 
 void Server::run() {
@@ -64,9 +61,7 @@ void Server::accept_connection() {
         return;
     }
 
-    auto context = new Context(this, sock);
-
-    ctx_pool[sock->get_fd()] = context;
+    ctx_pool[sock->get_fd()] = std::make_shared<Context>(this, sock);
 }
 
 void Server::stop() {

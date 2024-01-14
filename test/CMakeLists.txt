@@ -3,4 +3,5 @@ target_sources(server_test
         buffer.cpp
         main.cpp
         server.cpp
+        util.cpp
 )
