@@ -19,7 +19,7 @@ class Server {
         std::string port;
         Socket listen_sock;
         EventBase base;
-        std::unordered_map<evutil_socket_t, Context*> ctx_pool;
+        std::unordered_map<evutil_socket_t, std::shared_ptr<Context>> ctx_pool;
         int status = 0;
 
         static event_callback_fn accept_callback;
