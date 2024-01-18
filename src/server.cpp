@@ -25,11 +25,18 @@ event_callback_fn Server::accept_callback = [] (evutil_socket_t listener, short 
 };
 
 Server::Server():
-    port { "3993" }
+    port { "3993" },
+    thread_pool { 8 }
 {}
 
 Server::Server(std::string port):
-    port { port }
+    port { port },
+    thread_pool { 8 }
+{}
+
+Server::Server(std::string port, unsigned thread_count):
+    port { port },
+    thread_pool { thread_count }
 {}
 
 Server::~Server() {
@@ -65,6 +72,8 @@ void Server::accept_connection() {
 }
 
 void Server::stop() {
+    thread_pool.stop();
+
     if (base.loopexit()) status = 0;
     else status = -1;
 
