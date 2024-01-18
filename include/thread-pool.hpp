@@ -2,8 +2,10 @@
 #define INCLUDE_THREAD_H
 
 #include <vector>
+#include <queue>
 #include <functional>
 #include <thread>
+#include <future>
 #include <mutex>
 #include <condition_variable>
 
@@ -11,8 +13,8 @@ namespace serv {
 
 class ThreadPool {
     private:
-        std::vector<std::thread>> pool;
-        std::vector<std::future<void>>> thread_futures;
+        std::vector<std::thread> pool;
+        std::vector<std::future<void>> thread_futures;
         std::queue<std::function<void()>> queue;
         std::mutex queue_mutex;
         std::condition_variable condition;
@@ -20,6 +22,8 @@ class ThreadPool {
 
     public:
         ThreadPool(unsigned n);
+        ThreadPool(ThreadPool& pool) = delete;
+        ThreadPool(ThreadPool&& pool) = delete;
         ~ThreadPool();
 
         /**
@@ -39,11 +43,13 @@ class ThreadPool {
             {
                 // Lock the queue and add the new function.
                 std::unique_lock lock { queue_mutex };
-                queue.emplace([=] () { std::forward(f)(std::forward(args...)); });
+                queue.emplace([f = std::forward<F>(f), args = std::make_tuple(std::forward(args)...)] () mutable { 
+                    std::apply(std::move(f), std::move(args));
+                });
             }
 
             // Notify some waiting thread that there is available work in the queue.
-            dequeue_condition.notify_one();
+            condition.notify_one();
         }
 
         /**

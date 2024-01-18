@@ -203,7 +203,7 @@ class Buffer {
          * @brief Copies the data passed into the buffer. If data size exceeds buffer space, no data is copied.
          * 
          * @param data The data to write copy into the buffer.
-         * @return std::pair<int, bool> 
+         * @return bool Success or failure
          */
         bool write(std::vector<char> data) {
             if (bytes_free() < data.size()) {

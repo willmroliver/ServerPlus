@@ -21,8 +21,7 @@ event_callback_fn Context::receive_callback = [] (evutil_socket_t fd, short flag
         ctx->event.add();
     };
 
-    auto thread = std::thread(execute_cb);
-    thread.detach();
+    ctx->server->allocate_work(execute_cb);
 };
 
 event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short flags, void* arg) {
