@@ -1,4 +1,5 @@
 #include "thread-pool.hpp"
+#include <iostream>
 
 using namespace serv;
 
@@ -7,18 +8,18 @@ ThreadPool::ThreadPool(unsigned n):
 {
     for (auto i = 0; i < n; ++i) {
         std::promise<void> promise;
-        thread_futures.emplace(promise.get_future());
+        thread_futures.push_back(promise.get_future());
 
-        pool.emplace(std::thread([=] (std::promise<void> p) {
+        pool.emplace_back([this] (std::promise<void> p) {
             while (true) {
                 std::function<void()> task;
 
                 {
                     // Wait until there is work available or the thread pool has been halted.
                     std::unique_lock lock { queue_mutex };
-                    condition.wait(queue_mutex, [this] () {
+                    condition.wait(lock, [this] () {
                         return !(run && queue.empty());
-                    })
+                    });
 
                     if (!run && queue.empty()) {
                         p.set_value();
@@ -31,17 +32,27 @@ ThreadPool::ThreadPool(unsigned n):
 
                 task();
             }
-        }, std::move(promise)));
+        }, std::move(promise));
     }
 }
 
 ThreadPool::~ThreadPool() {
-    run = false;
+    if (run) {
+        stop();
+    }
+
+    for (auto& th : pool) {
+        th.join();
+    }
 }
 
-void ThreadPool::stop(bool graceful = true) {
+void ThreadPool::stop(bool graceful) {
     run = false;
-    for (const auto &f : thread_futures) {
-        f.wait();
+    condition.notify_all();
+    
+    if (graceful) {
+        for (const auto& future : thread_futures) {
+            future.wait();
+        }
     }
 }

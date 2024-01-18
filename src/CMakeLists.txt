@@ -4,4 +4,5 @@ target_sources(ServerPlus
         secure-socket.cpp
         server.cpp
         socket.cpp
+        thread-pool.cpp
 )
