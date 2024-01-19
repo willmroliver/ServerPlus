@@ -34,7 +34,7 @@ class SecureSocket {
         inline const Socket* const get_sock() const {
             return sock.get();
         }
-
+        
         /**
          * @brief Initialize a handshake from the host, passing the public key & IV to the peer.
          * 
