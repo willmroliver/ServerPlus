@@ -16,12 +16,10 @@ event_callback_fn Context::receive_callback = [] (evutil_socket_t fd, short flag
         return;
     }
 
-    auto execute_cb = [&ctx] () {
+    ctx->server->allocate_work([&ctx] () {
         ctx->handle_read_event();
         ctx->event.add();
-    };
-
-    ctx->server->allocate_work(execute_cb);
+    });
 };
 
 event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short flags, void* arg) {
@@ -31,7 +29,7 @@ event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short fl
     }
 
     if (ctx->sock.handshake_final()) {
-        ctx->event = ctx->server->get_base()->new_event(ctx->sock.get_sock()->get_fd(), EV_READ, receive_callback, ctx);
+        ctx->new_read_event();
         
         if (!ctx->event.add()) {
             ctx->server->get_base()->dump_status();
@@ -47,7 +45,7 @@ event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short fl
 Context::Context(Server* server, std::shared_ptr<Socket>& s):
     server { server },
     sock { s },
-    event { server->get_base()->new_event(s->get_fd(), EV_READ, handshake_callback, this) }
+    event { new_handshake_event() }
 {
     if (!sock.handshake_init()) {
         // error - need to figure out a way to get the server to clean this context up after (probably set a status field)
@@ -67,6 +65,10 @@ void Context::handle_request() {
 void Context::reset() {
     header_data = "";
     header_parsed = false;
+}
+
+Event Context::new_event(short what, event_callback_fn cb) {
+    return server->get_base()->new_event(sock.get_sock()->get_fd(), what, cb, this);
 }
 
 void Context::handle_read_event() {
