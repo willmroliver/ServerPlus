@@ -3,6 +3,7 @@
 
 #include "context.hpp"
 #include "server.hpp"
+#include "logger.hpp"
 
 using namespace libev;
 using namespace serv;
@@ -37,7 +38,7 @@ event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short fl
         }
     }
     else {
-        // retry handshake until we succeed or peer closes connection
+        Logger::get().log("server: handshake_final failed. retrying");
         ctx->sock.handshake_init();
     }
 };
@@ -48,7 +49,7 @@ Context::Context(Server* server, std::shared_ptr<Socket>& s):
     event { new_handshake_event() }
 {
     if (!sock.handshake_init()) {
-        // error - need to figure out a way to get the server to clean this context up after (probably set a status field)
+        Logger::get().error("server: handshake_init failed");
         return;
     }
 
@@ -86,7 +87,7 @@ void Context::handle_read_event() {
         }
 
         if (full) {
-            // error
+            Logger::get().error("server: context: request exceeded buffer size");
             sock.clear_buffer();
             reset();
             return;
@@ -97,14 +98,14 @@ void Context::handle_read_event() {
 
     if (header_data.size()) {
         if (!header.ParseFromString(header_data)) {
-            // error
+            Logger::get().error("server: context: header parse failure");
             reset();
             return;
         }
 
         if (header.type() == "ping") {
             if (!sock.try_send(header_data)) {
-                // error
+                Logger::get().error("server: context: send ping failed");
             }
 
             reset();
@@ -116,7 +117,7 @@ void Context::handle_read_event() {
     }
     
     if (full) {
-        // error
+        Logger::get().error("server: context: header exceeded buffer size");
         sock.clear_buffer();
         reset();
     }

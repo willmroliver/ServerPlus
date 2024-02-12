@@ -1,7 +1,9 @@
-#include "socket.hpp"
 #include <iostream>
 #include <string>
 #include <memory>
+
+#include "socket.hpp"
+#include "logger.hpp"
 
 using namespace serv;
 
@@ -29,7 +31,7 @@ bool Socket::try_listen(std::string port, int family, int socktype, int flags) {
     hints.ai_flags = flags;
 
     if ((gai = getaddrinfo(nullptr, port.c_str(), &hints, &ai)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(gai));
+        Logger::get().error("server: socket: getaddrinfo: " + std::string(gai_strerror(gai)));
         return false;
     }
 
@@ -38,14 +40,14 @@ bool Socket::try_listen(std::string port, int family, int socktype, int flags) {
 
     for (p = ai; p != nullptr; p = p->ai_next) {
         if ((fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-            perror("socket");
+            Logger::get().log("server: socket: socket: " + std::string(strerror(errno)));
             continue;
         }
 
         setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes);
 
         if (bind(fd, p->ai_addr, p->ai_addrlen) == -1) {
-            perror("bind");
+            Logger::get().log("server: socket: bind: " + std::string(strerror(errno)));
             close(fd);
             continue;
         }
@@ -54,21 +56,21 @@ bool Socket::try_listen(std::string port, int family, int socktype, int flags) {
     }
 
     if (p == nullptr) {
-        fprintf(stderr, "server: failed to connect");
+        Logger::get().error("server: failed to connect");
         return false;
     }
 
     freeaddrinfo(ai);
 
     if (evutil_make_socket_nonblocking(fd) == -1) {
-        perror("evutil_make_socket_nonblocking");
+        Logger::get().error("server: socket: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
         return false;
     }
 
     constexpr auto backlog = 10;
 
     if (listen(fd, backlog) == -1) {
-        perror("listen");
+        Logger::get().error("server: socket: listen: " + std::string(strerror(errno)));
         return false;
     }
 
@@ -89,12 +91,12 @@ bool Socket::try_accept(Socket& socket) {
     std::memset(&sock_addr, 0, addr_len);
 
     if ((sock_fd = accept(fd, (sockaddr*)&sock_addr, &sock_addr_len)) == -1) {
-        perror("accept");
+        Logger::get().error("server: socket: accept: " + std::string(strerror(errno)));
         return false;
     }
 
     if (evutil_make_socket_nonblocking(sock_fd) == -1) {
-        perror("evutil_make_socket_nonblocking");
+        Logger::get().error("server: socket: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
         return false;
     }
 
@@ -113,7 +115,7 @@ std::string Socket::get_host() const {
         return host;
     }
 
-    std::cerr << "getnameinfo: " << gai_strerror(gai) << std::endl;
+    Logger::get().error("server: socket: getnameinfo: " + std::string(gai_strerror(gai)));
     return "";
 }
 
@@ -140,10 +142,10 @@ std::pair<int, bool> Socket::try_recv() {
 
         if (nbytes <= 0) {
             if (nbytes == -1) {
-                perror("context: recvfrom");
+                Logger::get().error("server: socket: recvfrom: " + std::string(strerror(errno)));
             }
             else {
-                std::cout << "context: peer closed connection on sock " << socket->get_fd() << std::endl;
+                Logger::get().log("context: peer closed connection on sock " + std::to_string(socket->get_fd()));
             }
             
             socket->close_fd();
