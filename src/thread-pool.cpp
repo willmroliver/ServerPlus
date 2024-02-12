@@ -15,8 +15,9 @@ ThreadPool::ThreadPool(unsigned n):
                 std::function<void()> task;
 
                 {
-                    // Wait until there is work available or the thread pool has been halted.
                     std::unique_lock lock { queue_mutex };
+
+                    // Wait until there is work available or the thread pool has been halted.
                     condition.wait(lock, [this] () {
                         return !(run && queue.empty());
                     });

@@ -13,6 +13,7 @@
 
 #include "server.hpp"
 #include "context.hpp"
+#include "logger.hpp"
 
 using namespace libev;
 using namespace serv;
@@ -39,8 +40,7 @@ Server::Server(std::string port, unsigned thread_count):
     thread_pool { thread_count }
 {}
 
-Server::~Server() {
-}
+Server::~Server() {}
 
 void Server::run() {
     if (!listen_sock.try_listen(port)) {
@@ -48,7 +48,7 @@ void Server::run() {
         return;
     }
 
-    std::cout << "server: running on port " << port << std::endl;
+    Logger::get().log("server: running on port " + port);
 
     auto listen_event = base.new_event(listen_sock.get_fd(), EV_READ|EV_PERSIST, accept_callback, this);
 
@@ -64,7 +64,7 @@ void Server::accept_connection() {
     auto sock = std::make_shared<Socket>();
 
     if (!listen_sock.try_accept(*sock)) {
-        std::cerr << "server: failed to add connection to event base on sock " << sock->get_fd() << std::endl;
+        Logger::get().error("server: failed to add connection to event base on sock " + std::to_string(sock->get_fd()));
         return;
     }
 
@@ -77,7 +77,7 @@ void Server::stop() {
     if (base.loopexit()) status = 0;
     else status = -1;
 
-    std::cout << "server: stopped with status " << status << std::endl;
+    Logger::get().log("server: stopped with status " + std::to_string(status));
 }
 
 EventBase* const Server::get_base() {
