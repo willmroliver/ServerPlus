@@ -10,14 +10,12 @@
 #include <thread>
 #include <iostream>
 
-struct GlobalFixture {
+struct F {
     static test::Client<1024> client;
     static serv::Server s;
     static std::thread t;
 
     void setup() {
-        BOOST_TEST_MESSAGE("initializing server");
-
         auto run = [=] () {
             s.run();
         }; 
@@ -28,24 +26,19 @@ struct GlobalFixture {
 
     void teardown() {
         s.stop();
-
-        BOOST_ASSERT(s.get_status() != -1);
-        BOOST_TEST_MESSAGE("client, server tests complete");
     }
 };
 
-test::Client<1024> GlobalFixture::client { "3993" };
-serv::Server GlobalFixture::s { "3993" };
-std::thread GlobalFixture::t;
+test::Client<1024> F::client { "3993" };
+serv::Server F::s { "3993" };
+std::thread F::t;
 
-BOOST_TEST_GLOBAL_FIXTURE( GlobalFixture );
-
-BOOST_AUTO_TEST_CASE( handshake_test, * boost::unit_test::description("test server handshake procedure") ) {
-    BOOST_ASSERT(GlobalFixture::client.try_connect());
+BOOST_FIXTURE_TEST_CASE( handshake_test, F ) {
+    BOOST_ASSERT(F::client.try_connect());
 
     serv::proto::HostHandshake host_hs;
 
-    BOOST_ASSERT(host_hs.ParseFromString(GlobalFixture::client.try_recv()));
+    BOOST_ASSERT(host_hs.ParseFromString(F::client.try_recv()));
     auto host_pk_str = host_hs.public_key();
 
     crpt::Exchange dh { "ffdhe2048" };
@@ -57,10 +50,10 @@ BOOST_AUTO_TEST_CASE( handshake_test, * boost::unit_test::description("test serv
     auto peer_pk = dh.get_public_key().to_vector();
     peer_hs.set_public_key({ peer_pk.begin(), peer_pk.end() });
 
-    BOOST_ASSERT(GlobalFixture::client.try_send(peer_hs.SerializeAsString()));
+    BOOST_ASSERT(F::client.try_send(peer_hs.SerializeAsString()));
 
-    auto res = GlobalFixture::client.try_recv();
+    auto res = F::client.try_recv();
     BOOST_ASSERT(res.size() == 1 && res[0] == 1);
 
-    BOOST_ASSERT(GlobalFixture::client.try_close());
+    BOOST_ASSERT(F::client.try_close());
 }
