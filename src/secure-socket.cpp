@@ -1,10 +1,13 @@
 #include <crypt/util.hpp>
 #include <crypt/public-key-der.hpp>
+#include <crypt/error.hpp>
 #include "secure-socket.hpp"
 #include "socket.hpp"
 #include "socket.hpp"
 #include "host-handshake.pb.h"
 #include "peer-handshake.pb.h"
+#include "logger.hpp"
+#include "error-codes.hpp"
 
 using namespace serv;
 
@@ -26,7 +29,12 @@ bool SecureSocket::handshake_init() {
 
     auto data = handshake.SerializeAsString();
 
-    return sock->try_send(data);
+    if (sock->try_send(data)) {
+        return true;
+    }
+
+    Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_INIT_FAILED);
+    return false;
 }
 
 bool SecureSocket::handshake_final() {
@@ -47,6 +55,8 @@ bool SecureSocket::handshake_final() {
 
     if (!handshake.ParseFromString(data)) {
         // error
+        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED);
+        Logger::get().error("server: secure-socket: protobuf: handshake.ParseFromString");
         return false;
     }
     
@@ -57,6 +67,8 @@ bool SecureSocket::handshake_final() {
 
     if (!dh.derive_secret(peer_pk)) {
         // error
+        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED);
+        Logger::get().error("server: secure-socket: crypt: Exchange::derive_secret");
         return false;
     }
 
@@ -65,6 +77,8 @@ bool SecureSocket::handshake_final() {
 
     if (!success) {
         // error
+        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED);
+        Logger::get().error("server: secure-socket: crypt: hash");
         return false;
     }
 
@@ -72,7 +86,12 @@ bool SecureSocket::handshake_final() {
     is_secure = true;
 
     // Let's send a single byte, value 1, to indicate the success of the handshake.
-    return sock->try_send(std::vector<char> { 1 });
+    if (!sock->try_send(std::vector<char> { 1 })) {
+        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED);
+        return false;
+    }
+
+    return true;
 }
 
 std::pair<int, bool> SecureSocket::try_recv() {
@@ -84,6 +103,11 @@ std::pair<int, bool> SecureSocket::try_recv() {
 
     auto sock_recv = sock->try_recv();
 
+    if (!sock_recv.second) {
+        Logger::get().error(ERR_SECURE_SOCKET_RECV_FAILED);
+        return sock_recv;
+    }
+
     if (sock_recv.first < 1) {
         // error
         return sock_recv;
@@ -94,6 +118,7 @@ std::pair<int, bool> SecureSocket::try_recv() {
 
     if (!(success && buf.write(plain_text))) {
         // error
+        Logger::get().error(ERR_SECURE_SOCKET_RECV_FAILED);
         return { -1, sock_recv.second };
     }
     
@@ -110,13 +135,19 @@ bool SecureSocket::try_send(std::string data) {
 
     if (!success) {
         // error
+        Logger::get().error(ERR_SECURE_SOCKET_SEND_FAILED);
         return false;
     }
 
-    return sock->try_send(cipher_text);
+    if (!sock->try_send(cipher_text)) {
+        Logger::get().error(ERR_SECURE_SOCKET_SEND_FAILED);
+        return false;
+    }
+
+    return true;
 }
 
-std::vector<char> SecureSocket::retrieve_data(char delim) {
+std::vector<char> SecureSocket::read_buffer(char delim) {
     if (buf.contains(delim)) {
         auto [res, found] = buf.read_to(delim);
         return res;
@@ -125,8 +156,8 @@ std::vector<char> SecureSocket::retrieve_data(char delim) {
     return {};
 }
 
-std::string SecureSocket::retrieve_message()  {
-    auto data = retrieve_data(0);
+std::string SecureSocket::read_buffer()  {
+    auto data = read_buffer(0);
     return { data.begin(), data.end() };
 }
 

@@ -104,7 +104,7 @@ class Socket {
          * @param data The data to send 
          * @return bool The success or failure of the attempt to send all the data. 
          */
-        bool try_send(std::string data);
+        bool try_send(const std::string& data);
 
         /**
          * @brief Attempts to send the bytes stored in data over the network.
@@ -113,7 +113,9 @@ class Socket {
          * @param data The data to send
          * @return bool The success or failure of the attempt to send all the data. 
          */
-        bool try_send(std::vector<char> data);
+        bool try_send(const std::vector<char>& data);
+
+        bool try_send(const std::vector<char>& data, ssize_t send(int, const void *, size_t, int));
 
         /**
          * @brief Retrieves data from the buffer (FIFO) up to the first instance of delim.
@@ -121,14 +123,14 @@ class Socket {
          * @param delim A character (delimiting between blocks of data).
          * @return std::string The message, or an empty string if delim is not found.
          */
-        std::vector<char> retrieve_data(char delim);
+        std::vector<char> read_buffer(char delim);
 
         /**
          * @brief Retrieves data from the buffer (FIFO) up to the first null-terminator.
          * 
          * @return std::string The message, or an empty string if a null-terminator is not found.
          */
-        std::string retrieve_message();
+        std::string read_buffer();
 
         /**
          * @brief Empties and returns the entire content of the buffer.

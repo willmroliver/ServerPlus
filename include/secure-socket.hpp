@@ -70,14 +70,14 @@ class SecureSocket {
          * @param delim A character (delimiting between blocks of data).
          * @return std::string The message, or an empty string if delim is not found.
          */
-        std::vector<char> retrieve_data(char delim);
+        std::vector<char> read_buffer(char delim);
 
         /**
          * @brief Retrieves data from the buffer (FIFO) up to the first null-terminator.
          * 
          * @return std::string The message, or an empty string if a null-terminator is not found.
          */
-        std::string retrieve_message();
+        std::string read_buffer();
 
         /**
          * @brief Clears the socket buffer memory and resets internal state.

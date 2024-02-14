@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <list>
 #include <iostream>
 #include <chrono>
 #include <utility>
@@ -12,11 +13,11 @@ namespace serv {
 class Logger {
     private:
         static Logger* logger;
-        std::vector<std::pair<uint64_t, std::string>> buf;
+        std::list<std::pair<uint64_t, std::string>> buf;
         std::ostream* out;
         std::ostream* err;
         uint64_t sys_time() const;
-        std::string format(const std::pair<uint64_t, std::string>& msg) const;
+        std::string format(const std::pair<uint64_t, std::string>& msg, int err_code=0) const;
         void flush();
         Logger();
     
@@ -43,8 +44,14 @@ class Logger {
 
         void log(const std::string& msg, bool flush=true);
         void error(const std::string& msg, bool flush=true);
+        void error(int err_code, bool flush=true);
         const std::pair<uint64_t, std::string> top() const;
         const std::pair<uint64_t, std::string> pop();
+        std::ostream* const get_log_stream() const;
+        std::ostream* const get_err_stream() const;
+        std::vector<std::pair<uint64_t, std::string>> search_buf(const std::string& match) const;
+        std::vector<std::pair<uint64_t, std::string>> search_buf(int err_code) const;
+        void clear_buf();
 };
 
 }

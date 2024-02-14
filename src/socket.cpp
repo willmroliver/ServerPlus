@@ -4,6 +4,7 @@
 
 #include "socket.hpp"
 #include "logger.hpp"
+#include "error-codes.hpp"
 
 using namespace serv;
 
@@ -31,6 +32,7 @@ bool Socket::try_listen(std::string port, int family, int socktype, int flags) {
     hints.ai_flags = flags;
 
     if ((gai = getaddrinfo(nullptr, port.c_str(), &hints, &ai)) != 0) {
+        Logger::get().error(ERR_SOCKET_GET_ADDR_INFO_FAILED);
         Logger::get().error("server: socket: getaddrinfo: " + std::string(gai_strerror(gai)));
         return false;
     }
@@ -56,13 +58,15 @@ bool Socket::try_listen(std::string port, int family, int socktype, int flags) {
     }
 
     if (p == nullptr) {
-        Logger::get().error("server: failed to connect");
+        Logger::get().error(ERR_SOCKET_BIND_SOCKET_FAILED);
+        Logger::get().error("server: failed to create and bind socket");
         return false;
     }
 
     freeaddrinfo(ai);
 
     if (evutil_make_socket_nonblocking(fd) == -1) {
+        Logger::get().error(ERR_SOCKET_MAKE_NONBLOCKING_FAILED);
         Logger::get().error("server: socket: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
         return false;
     }
@@ -70,6 +74,7 @@ bool Socket::try_listen(std::string port, int family, int socktype, int flags) {
     constexpr auto backlog = 10;
 
     if (listen(fd, backlog) == -1) {
+        Logger::get().error(ERR_SOCKET_LISTEN_FAILED);
         Logger::get().error("server: socket: listen: " + std::string(strerror(errno)));
         return false;
     }
@@ -91,11 +96,13 @@ bool Socket::try_accept(Socket& socket) {
     std::memset(&sock_addr, 0, addr_len);
 
     if ((sock_fd = accept(fd, (sockaddr*)&sock_addr, &sock_addr_len)) == -1) {
+        Logger::get().error(ERR_SOCKET_ACCEPT_CONN_FAILED);
         Logger::get().error("server: socket: accept: " + std::string(strerror(errno)));
         return false;
     }
 
     if (evutil_make_socket_nonblocking(sock_fd) == -1) {
+        Logger::get().error(ERR_SOCKET_MAKE_NONBLOCKING_FAILED);
         Logger::get().error("server: socket: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
         return false;
     }
@@ -115,6 +122,7 @@ std::string Socket::get_host() const {
         return host;
     }
 
+    Logger::get().error(ERR_SOCKET_GET_HOST_FAILED);
     Logger::get().error("server: socket: getnameinfo: " + std::string(gai_strerror(gai)));
     return "";
 }
@@ -130,7 +138,13 @@ bool Socket::close_fd() {
 }
 
 std::pair<int, bool> Socket::try_recv(int (*write_cb) (char* dest, unsigned n, void* data), void* arg) {
-    return buf.write(write_cb, buf.bytes_free(), arg);
+    auto res = buf.write(write_cb, buf.bytes_free(), arg);
+
+    if (!res.second) {
+        Logger::get().error(ERR_SOCKET_RECV_FAILED);
+    }
+    
+    return res;
 }
 
 std::pair<int, bool> Socket::try_recv() {
@@ -156,29 +170,19 @@ std::pair<int, bool> Socket::try_recv() {
     }, this);
 }
 
-bool Socket::try_send(std::string data) {
-    if (!fd || listening) return false;
-            
-    auto bytes = data.c_str();
-    auto len = data.size();
-
-    auto bytes_sent = 0;
-    auto total = 0;
-
-    while (total < len) {
-        if ((bytes_sent = send(fd, bytes + total, len - total, 0)) == -1) {
-            // send error
-            return false;
-        }
-
-        total += bytes_sent;
-    }
-
-    return true;
+bool Socket::try_send(const std::string& data) {
+    return try_send(std::vector<char>(data.begin(), data.end()), send);
 }
 
-bool Socket::try_send(std::vector<char> data) {
-    if (!fd || listening) return false;
+bool Socket::try_send(const std::vector<char>& data) {
+    return try_send(data, send);
+}
+
+bool Socket::try_send(const std::vector<char>& data, ssize_t send(int, const void *, size_t, int)) {
+    if (!fd || listening) {
+        Logger::get().error(ERR_SOCKET_INVALID_SEND_ATTEMPT);
+        return false;
+    }
             
     auto bytes = data.data();
     auto len = data.size();
@@ -189,6 +193,7 @@ bool Socket::try_send(std::vector<char> data) {
     while (total < len) {
         if ((bytes_sent = send(fd, bytes + total, len - total, 0)) == -1) {
             // send error
+            Logger::get().error(ERR_SOCKET_SEND_FAILED);
             return false;
         }
 
@@ -198,7 +203,7 @@ bool Socket::try_send(std::vector<char> data) {
     return true;
 }
 
-std::vector<char> Socket::retrieve_data(char delim) {
+std::vector<char> Socket::read_buffer(char delim) {
     if (buf.contains(delim)) {
         auto [res, found] = buf.read_to(delim);
         return res;
@@ -207,8 +212,8 @@ std::vector<char> Socket::retrieve_data(char delim) {
     return {};
 }
 
-std::string Socket::retrieve_message() {
-    auto data = retrieve_data(0);
+std::string Socket::read_buffer() {
+    auto data = read_buffer(0);
     return { data.begin(), data.end() };
 }
 
