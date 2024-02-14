@@ -4,6 +4,7 @@
 #include "context.hpp"
 #include "server.hpp"
 #include "logger.hpp"
+#include "error-codes.hpp"
 
 using namespace libev;
 using namespace serv;
@@ -78,7 +79,7 @@ void Context::handle_read_event() {
     if (nbytes <= 0) return;
 
     if (header_parsed) {
-        request_data = sock.retrieve_message();
+        request_data = sock.read_buffer();
 
         if (request_data.size()) {
             handle_request();
@@ -87,24 +88,26 @@ void Context::handle_read_event() {
         }
 
         if (full) {
-            Logger::get().error("server: context: request exceeded buffer size");
+            Logger::get().error(ERR_CONTEXT_BUFFER_FULL);
             sock.clear_buffer();
             reset();
             return;
         }
     }
     
-    header_data = sock.retrieve_message();
+    header_data = sock.read_buffer();
 
     if (header_data.size()) {
         if (!header.ParseFromString(header_data)) {
-            Logger::get().error("server: context: header parse failure");
+            Logger::get().error(ERR_CONTEXT_HANDLE_READ_FAILED);
+            Logger::get().error("server: context: protobuf: ParseFromString");
             reset();
             return;
         }
 
         if (header.type() == "ping") {
             if (!sock.try_send(header_data)) {
+                Logger::get().error(ERR_CONTEXT_HANDLE_READ_FAILED);
                 Logger::get().error("server: context: send ping failed");
             }
 
@@ -117,7 +120,7 @@ void Context::handle_read_event() {
     }
     
     if (full) {
-        Logger::get().error("server: context: header exceeded buffer size");
+        Logger::get().error(ERR_CONTEXT_BUFFER_FULL);
         sock.clear_buffer();
         reset();
     }
