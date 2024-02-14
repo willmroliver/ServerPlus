@@ -11,11 +11,11 @@
 #include <iostream>
 
 struct F {
-    static test::Client<1024> client;
-    static serv::Server s;
-    static std::thread t;
+    test::Client<1024> client;
+    serv::Server s;
+    std::thread t;
 
-    void setup() {
+    F(): client { "8000" }, s { "8000" } {
         auto run = [=] () {
             s.run();
         }; 
@@ -24,21 +24,17 @@ struct F {
         t.detach();
     }
 
-    void teardown() {
+    ~F() {
         s.stop();
     }
 };
 
-test::Client<1024> F::client { "3993" };
-serv::Server F::s { "3993" };
-std::thread F::t;
-
-BOOST_FIXTURE_TEST_CASE( handshake_test, F ) {
-    BOOST_ASSERT(F::client.try_connect());
+BOOST_FIXTURE_TEST_CASE( handshake_integration_test, F ) {
+    BOOST_ASSERT(client.try_connect());
 
     serv::proto::HostHandshake host_hs;
 
-    BOOST_ASSERT(host_hs.ParseFromString(F::client.try_recv()));
+    BOOST_ASSERT(host_hs.ParseFromString(client.try_recv()));
     auto host_pk_str = host_hs.public_key();
 
     crpt::Exchange dh { "ffdhe2048" };
@@ -50,10 +46,10 @@ BOOST_FIXTURE_TEST_CASE( handshake_test, F ) {
     auto peer_pk = dh.get_public_key().to_vector();
     peer_hs.set_public_key({ peer_pk.begin(), peer_pk.end() });
 
-    BOOST_ASSERT(F::client.try_send(peer_hs.SerializeAsString()));
+    BOOST_ASSERT(client.try_send(peer_hs.SerializeAsString()));
 
-    auto res = F::client.try_recv();
+    auto res = client.try_recv();
     BOOST_ASSERT(res.size() == 1 && res[0] == 1);
 
-    BOOST_ASSERT(F::client.try_close());
+    BOOST_ASSERT(client.try_close());
 }

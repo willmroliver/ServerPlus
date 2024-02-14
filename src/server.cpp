@@ -14,6 +14,7 @@
 #include "server.hpp"
 #include "context.hpp"
 #include "logger.hpp"
+#include "error-codes.hpp"
 
 using namespace libev;
 using namespace serv;
@@ -64,7 +65,8 @@ void Server::accept_connection() {
     auto sock = std::make_shared<Socket>();
 
     if (!listen_sock.try_accept(*sock)) {
-        Logger::get().error("server: failed to add connection to event base on sock " + std::to_string(sock->get_fd()));
+        Logger::get().error(ERR_SERVER_ACCEPT_CONN_FAILED);
+        Logger::get().error("server: accept_connection: failed on sock " + std::to_string(sock->get_fd()));
         return;
     }
 

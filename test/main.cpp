@@ -2,6 +2,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <fstream>
+#include <crypt/error.hpp>
 #include "logger.hpp"
 
 struct GlobalFixture {
@@ -11,7 +12,8 @@ struct GlobalFixture {
 
     void setup() {
         serv::Logger::get();
-        serv::Logger::set(&tout, &terr);
+        // serv::Logger::set(&tout, &terr);
+        crpt::Error::set_err_ostream(serv::Logger::get().get_err_stream());
     }
 };
 
