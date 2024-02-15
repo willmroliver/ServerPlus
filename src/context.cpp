@@ -76,7 +76,20 @@ Event Context::new_event(short what, event_callback_fn cb) {
 void Context::handle_read_event() {
     auto [nbytes, full] = sock.try_recv();
 
-    if (nbytes <= 0) return;
+    switch (nbytes) {
+        case -2:
+            Logger::get().log("server: context: secure-socket blocked try_recv(). attempting handshake");
+            sock.handshake_init();
+            return;
+        case -1:
+            Logger::get().error(ERR_CONTEXT_HANDLE_READ_FAILED);
+            return;
+        case 0:
+            Logger::get().log("server: context: connection closed");
+            return;
+        default:
+            break;
+    }
 
     if (header_parsed) {
         request_data = sock.read_buffer();

@@ -23,7 +23,7 @@ std::vector<TryListenTestCase> try_listen_tests {
 };
 
 void do_try_listen_test(const TryListenTestCase& test) {
-    init_test();
+    clear_logger();
 
     serv::Socket sock;
 
@@ -41,7 +41,7 @@ struct AcceptFixture {
     test::Client<1024> client;
 
     AcceptFixture(): client { "8000" } {
-        init_test();
+        clear_logger();
         listener.try_listen("8000", AF_UNSPEC, SOCK_STREAM, AI_PASSIVE);
     }
 
@@ -67,7 +67,7 @@ struct SendFixture {
     test::Client<1024> client;
 
     SendFixture(): client { "8000" } {
-        init_test();
+        clear_logger();
         listener.try_listen("8000", AF_UNSPEC, SOCK_STREAM, AI_PASSIVE);
         client.try_connect();
         listener.try_accept(sender);
@@ -102,7 +102,7 @@ BOOST_FIXTURE_TEST_CASE( socket_try_send_table_test, SendFixture ) {
 }
 
 BOOST_AUTO_TEST_CASE( socket_try_send_fails_test ) {
-    init_test();
+    clear_logger();
     serv::Socket sock;
 
     BOOST_ASSERT( !sock.try_send("123456789") );

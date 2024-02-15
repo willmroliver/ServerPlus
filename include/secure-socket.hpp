@@ -25,6 +25,7 @@ class SecureSocket {
     
     public:
         SecureSocket(std::shared_ptr<Socket>& sock);
+        SecureSocket(std::shared_ptr<Socket>&& sock);
         SecureSocket(SecureSocket& sock) = default;
         SecureSocket(SecureSocket&& sock) = default;
         ~SecureSocket() = default;
@@ -52,7 +53,7 @@ class SecureSocket {
         /**
          * @brief If secure, retrieves and decrypts sock data. See Socket::try_rev()
          * 
-         * @return std::pair<int, bool> The number of bytes read (-1 indicates error) and whether the buffer is full
+         * @return std::pair<int, bool> The number of bytes read (-2 indicates socket is not secure, -1 indicates error) and whether the buffer is full
          */
         std::pair<int, bool> try_recv();
 

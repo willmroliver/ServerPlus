@@ -15,6 +15,10 @@ SecureSocket::SecureSocket(std::shared_ptr<Socket>& sock):
     sock { sock }
 {}
 
+SecureSocket::SecureSocket(std::shared_ptr<Socket>&& sock): 
+    sock { sock }
+{}
+
 bool SecureSocket::handshake_init() {
     is_secure = false;
     shared_secret.clear();
@@ -29,12 +33,12 @@ bool SecureSocket::handshake_init() {
 
     auto data = handshake.SerializeAsString();
 
-    if (sock->try_send(data)) {
-        return true;
+    if (!sock->try_send(data)) {
+        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_INIT_FAILED);
+        return false;
     }
 
-    Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_INIT_FAILED);
-    return false;
+    return true;
 }
 
 bool SecureSocket::handshake_final() {
@@ -55,8 +59,7 @@ bool SecureSocket::handshake_final() {
 
     if (!handshake.ParseFromString(data)) {
         // error
-        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED);
-        Logger::get().error("server: secure-socket: protobuf: handshake.ParseFromString");
+        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_PARSE_FAILED);
         return false;
     }
     
@@ -67,8 +70,7 @@ bool SecureSocket::handshake_final() {
 
     if (!dh.derive_secret(peer_pk)) {
         // error
-        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED);
-        Logger::get().error("server: secure-socket: crypt: Exchange::derive_secret");
+        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_DERIVE_FAILED);
         return false;
     }
 
@@ -77,8 +79,7 @@ bool SecureSocket::handshake_final() {
 
     if (!success) {
         // error
-        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED);
-        Logger::get().error("server: secure-socket: crypt: hash");
+        Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_HASH_FAILED);
         return false;
     }
 
@@ -98,7 +99,7 @@ std::pair<int, bool> SecureSocket::try_recv() {
     if (!is_secure) {
         sock->try_recv();
         sock->clear_buffer();
-        return { -1, false };
+        return { -2, false };
     }
 
     auto sock_recv = sock->try_recv();
