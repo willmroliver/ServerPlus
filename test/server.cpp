@@ -10,12 +10,12 @@
 #include <thread>
 #include <iostream>
 
-struct F {
+struct ServerFixture {
     test::Client<1024> client;
     serv::Server s;
     std::thread t;
 
-    F(): client { "8000" }, s { "8000" } {
+    ServerFixture(): client { "8000" }, s { "8000" } {
         auto run = [=] () {
             s.run();
         }; 
@@ -24,12 +24,12 @@ struct F {
         t.detach();
     }
 
-    ~F() {
+    ~ServerFixture() {
         s.stop();
     }
 };
 
-BOOST_FIXTURE_TEST_CASE( handshake_integration_test, F ) {
+BOOST_FIXTURE_TEST_CASE( handshake_integration_test, ServerFixture ) {
     BOOST_ASSERT(client.try_connect());
 
     serv::proto::HostHandshake host_hs;
