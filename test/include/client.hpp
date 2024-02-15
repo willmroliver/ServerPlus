@@ -5,6 +5,9 @@
 #include <sys/socket.h>
 #include <event2/event.h>
 #include <unistd.h>
+#include <crypt/exchange.hpp>
+#include "host-handshake.pb.h"
+#include "peer-handshake.pb.h"
 
 namespace test {
 
@@ -64,6 +67,31 @@ class Client {
             freeaddrinfo(ai);
 
             return true;
+        }
+
+        /**
+         * @brief Convenience function to perform a correct peer handshake response.
+         * An integration test for the sequence of calls made by this function exists in test/server.cpp.
+         */
+        bool try_handshake() {
+            serv::proto::HostHandshake host_hs;
+
+            if (!host_hs.ParseFromString(try_recv())) {
+                return false;
+            }
+
+            auto host_pk_str = host_hs.public_key();
+
+            crpt::Exchange dh { "ffdhe2048" };
+            crpt::PublicKeyDER host_pk;
+
+            host_pk.from_vector({ host_pk_str.begin(), host_pk_str.end() });
+            serv::proto::PeerHandshake peer_hs;
+
+            auto peer_pk = dh.get_public_key().to_vector();
+            peer_hs.set_public_key({ peer_pk.begin(), peer_pk.end() });
+
+            return try_send(peer_hs.SerializeAsString());
         }
 
         bool try_close() {
