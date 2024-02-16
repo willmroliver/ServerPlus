@@ -40,6 +40,13 @@ class Context {
         void handle_request();
 
         /**
+         * @brief Logs and returns an error status to the peer
+         * 
+         * @param err_code See error-codes.hpp
+         */
+        void do_error(int err_code);
+
+        /**
          * @brief Resets the context, ready to receive the next request
          */
         void reset();

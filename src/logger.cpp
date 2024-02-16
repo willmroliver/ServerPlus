@@ -1,3 +1,4 @@
+#include <mutex>
 #include "logger.hpp"
 #include "error-codes.hpp"
 
@@ -5,22 +6,41 @@ using namespace serv;
 
 Logger* Logger::logger = nullptr;
 
-uint64_t Logger::sys_time() const {
-    using namespace std::chrono;
-    const auto st = system_clock::now();
-    const auto duration = st.time_since_epoch();
-    return duration_cast<milliseconds>(duration).count();
+std::pair<uint64_t, std::string> Logger::new_item(const std::string& msg) {
+    return { sys_time(), msg };
 }
 
-std::string Logger::format(const std::pair<uint64_t, std::string>& msg, int err_code) const {
-    auto formatted = std::to_string(msg.first);
+std::pair<uint64_t, std::string> Logger::new_item(int err_code) {
+    return { sys_time(), error_messages[err_code] };
+}
+
+void Logger::log_item(std::ostream* stream, const std::pair<uint64_t, std::string>& item, int err_code, bool flush) {
+    std::lock_guard lock { log_item_mutex };
+
+    buf.push_back(item);
+
+    if (buf.size() > 100) {
+        buf.pop_front();
+    }
+
+    *stream << format(item, err_code);
+
+    if (flush) {
+        *stream << std::endl;
+    } else {
+        *stream << '\n';
+    }
+}
+
+std::string Logger::format(const std::pair<uint64_t, std::string>& item, int err_code) const {
+    auto formatted = std::to_string(item.first);
     formatted.append(" - ");
 
     if (err_code) {
         formatted.append("ERR ").append(std::to_string(err_code)).append(" - ");
     }
 
-    return formatted.append(msg.second);
+    return formatted.append(item.second);
 }
 
 void Logger::flush() {
@@ -33,43 +53,29 @@ Logger::Logger():
     err { &std::cerr }
 {}
 
-void Logger::log(const std::string& msg, bool flush) {
-    buf.emplace_back(sys_time(), msg);
-    if (buf.size() > 100) {
-    }
-    *out << format(top());
-
-    if (flush) {
-        *out << std::endl;
-    } else {
-        *out << '\n';
-    }
+uint64_t Logger::sys_time() const {
+    using namespace std::chrono;
+    const auto st = system_clock::now();
+    const auto duration = st.time_since_epoch();
+    return duration_cast<milliseconds>(duration).count();
 }
 
-void Logger::error(const std::string& msg, bool flush) {
-    buf.emplace_back(sys_time(), msg);
-    *err << format(top());
-    
-    if (flush) {
-        *err << std::endl;
-    } else {
-        *err << '\n';
-    }
+const std::pair<uint64_t, std::string> Logger::log(const std::string& msg, bool flush) {
+    auto item = new_item(msg);
+    log_item(out, item, 0, flush);
+    return item;
 }
 
-void Logger::error(int err_code, bool flush) {
-    buf.emplace_back(sys_time(), error_messages[err_code]);
-    if (buf.size() > 100) {
-        buf.pop_front();
-    }
-    
-    *err << format(top(), err_code);
-    
-    if (flush) {
-        *err << std::endl;
-    } else {
-        *err << '\n';
-    }
+const std::pair<uint64_t, std::string> Logger::error(const std::string& msg, bool flush) {
+    auto item = new_item(msg);
+    log_item(err, item, 0, flush);
+    return item;
+}
+
+const std::pair<uint64_t, std::string> Logger::error(int err_code, bool flush) {
+    auto item = new_item(err_code);
+    log_item(err, item, err_code, flush);
+    return item;
 }
 
 const std::pair<uint64_t, std::string> Logger::top() const {

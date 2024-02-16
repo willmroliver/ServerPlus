@@ -5,6 +5,7 @@
 #include "server.hpp"
 #include "logger.hpp"
 #include "error-codes.hpp"
+#include "error.pb.h"
 
 using namespace libev;
 using namespace serv;
@@ -64,6 +65,19 @@ void Context::handle_request() {
 
 }
 
+void Context::do_error(int err_code) {
+    auto &[ts, msg] = Logger::get().error(err_code);
+
+    proto::Error err;
+    err.set_code(err_code);
+    err.set_message(msg);
+    err.set_timestamp(ts);
+
+    if (!sock.try_send(err.SerializeAsString())) {
+        Logger::get().error(ERR_CONTEXT_DO_ERROR_FAILED);
+    }
+}
+
 void Context::reset() {
     header_data = "";
     header_parsed = false;
@@ -82,7 +96,7 @@ void Context::handle_read_event() {
             sock.handshake_init();
             return;
         case -1:
-            Logger::get().error(ERR_CONTEXT_HANDLE_READ_FAILED);
+            do_error(ERR_CONTEXT_HANDLE_READ_FAILED);
             return;
         case 0:
             Logger::get().log("server: context: connection closed");
@@ -101,7 +115,7 @@ void Context::handle_read_event() {
         }
 
         if (full) {
-            Logger::get().error(ERR_CONTEXT_BUFFER_FULL);
+            do_error(ERR_CONTEXT_BUFFER_FULL);
             sock.clear_buffer();
             reset();
             return;
@@ -112,7 +126,7 @@ void Context::handle_read_event() {
 
     if (header_data.size()) {
         if (!header.ParseFromString(header_data)) {
-            Logger::get().error(ERR_CONTEXT_HANDLE_READ_FAILED);
+            do_error(ERR_CONTEXT_HANDLE_READ_FAILED);
             Logger::get().error("server: context: protobuf: ParseFromString");
             reset();
             return;
@@ -120,7 +134,7 @@ void Context::handle_read_event() {
 
         if (header.type() == "ping") {
             if (!sock.try_send(header_data)) {
-                Logger::get().error(ERR_CONTEXT_HANDLE_READ_FAILED);
+                do_error(ERR_CONTEXT_PING_FAILED);
                 Logger::get().error("server: context: send ping failed");
             }
 
@@ -133,7 +147,7 @@ void Context::handle_read_event() {
     }
     
     if (full) {
-        Logger::get().error(ERR_CONTEXT_BUFFER_FULL);
+        do_error(ERR_CONTEXT_BUFFER_FULL);
         sock.clear_buffer();
         reset();
     }

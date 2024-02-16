@@ -32,7 +32,7 @@ class Server {
         Server(std::string port, unsigned thread_count);
         Server(Server &s) = delete;
         Server(Server &&s) = delete;
-        ~Server();
+        ~Server() = default;
 
         /**
          * @brief Calls try_listen() and adds a persistent event to listen to & accept connections from the bound sock.
