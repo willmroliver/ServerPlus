@@ -7,6 +7,7 @@
 #include <iostream>
 #include <chrono>
 #include <utility>
+#include <mutex>
 
 namespace serv {
 
@@ -16,8 +17,12 @@ class Logger {
         std::list<std::pair<uint64_t, std::string>> buf;
         std::ostream* out;
         std::ostream* err;
-        uint64_t sys_time() const;
-        std::string format(const std::pair<uint64_t, std::string>& msg, int err_code=0) const;
+        std::mutex log_item_mutex;
+
+        std::pair<uint64_t, std::string> new_item(const std::string& msg);
+        std::pair<uint64_t, std::string> new_item(int err_code);
+        void log_item(std::ostream* stream, const std::pair<uint64_t, std::string>& item, int err_code, bool flush);
+        std::string format(const std::pair<uint64_t, std::string>& item, int err_code=0) const;
         void flush();
         Logger();
     
@@ -42,9 +47,10 @@ class Logger {
         void operator=(const Logger&) = delete;
         void operator=(const Logger&&) = delete;
 
-        void log(const std::string& msg, bool flush=true);
-        void error(const std::string& msg, bool flush=true);
-        void error(int err_code, bool flush=true);
+        uint64_t sys_time() const;
+        const std::pair<uint64_t, std::string> log(const std::string& msg, bool flush=true);
+        const std::pair<uint64_t, std::string> error(const std::string& msg, bool flush=true);
+        const std::pair<uint64_t, std::string> error(int err_code, bool flush=true);
         const std::pair<uint64_t, std::string> top() const;
         const std::pair<uint64_t, std::string> pop();
         std::ostream* const get_log_stream() const;
