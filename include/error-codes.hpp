@@ -40,6 +40,8 @@ constexpr int ERR_SECURE_SOCKET_SEND_FAILED = 12007;
 // Context
 constexpr int ERR_CONTEXT_BUFFER_FULL = 13001;
 constexpr int ERR_CONTEXT_HANDLE_READ_FAILED = 13002;
+constexpr int ERR_CONTEXT_DO_ERROR_FAILED = 13003;
+constexpr int ERR_CONTEXT_PING_FAILED = 13004;
 
 // Server
 constexpr int ERR_SERVER_ACCEPT_CONN_FAILED = 13003;
@@ -68,7 +70,9 @@ static std::unordered_map<int, std::string> error_messages = {
 
     // Context
     { ERR_CONTEXT_BUFFER_FULL, "Context: incoming data exceeded context buffer size" },
-    { ERR_CONTEXT_HANDLE_READ_FAILED, "Context: failed to handle socket request" },
+    { ERR_CONTEXT_HANDLE_READ_FAILED, "Context: failed to read incoming data" },
+    { ERR_CONTEXT_DO_ERROR_FAILED, "Context: failed to send error response to peer" },
+    { ERR_CONTEXT_PING_FAILED, "Context: failed to send ping response to peer" },
 
     // Server
     { ERR_SERVER_ACCEPT_CONN_FAILED, "Server: failed to accept incoming connection" },

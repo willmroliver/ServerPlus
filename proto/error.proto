@@ -4,5 +4,6 @@ package serv.proto;
 
 message Error {
     int32 code = 1;
-    string description = 2;
+    string message = 2;
+    uint64 timestamp = 3;
 }

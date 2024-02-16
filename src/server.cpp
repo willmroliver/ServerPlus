@@ -41,8 +41,6 @@ Server::Server(std::string port, unsigned thread_count):
     thread_pool { thread_count }
 {}
 
-Server::~Server() {}
-
 void Server::run() {
     if (!listen_sock.try_listen(port)) {
         status = -1;

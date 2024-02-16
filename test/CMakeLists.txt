@@ -5,5 +5,4 @@ target_sources(server_test
         secure-socket.cpp
         server.cpp
         socket.cpp
-        util.cpp
 )
