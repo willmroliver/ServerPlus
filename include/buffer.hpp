@@ -28,7 +28,7 @@ class Buffer {
             std::memset(buff, 0, T + 1);
         };
 
-        Buffer(std::vector<char> data):
+        Buffer(std::vector<char>& data):
             begin { 0 },
             end { 0 },
             full { false }
@@ -45,7 +45,7 @@ class Buffer {
             }
         }
 
-        Buffer(std::string data):
+        Buffer(std::string& data):
             begin { 0 },
             end { 0 },
             full { false }
@@ -150,7 +150,7 @@ class Buffer {
          * @param match 
          * @return size_t The starting index of the discovered match, or string::npos
          */
-        size_t find(std::string match) const {
+        size_t find(std::string& match) const {
             auto n = match.length();
 
             if (is_empty()
@@ -205,7 +205,7 @@ class Buffer {
          * @param data The data to write copy into the buffer.
          * @return bool Success or failure
          */
-        bool write(std::vector<char> data) {
+        bool write(std::vector<char>& data) {
             if (bytes_free() < data.size()) {
                 return false;
             }

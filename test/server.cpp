@@ -1,7 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include <crypt/exchange.hpp>
 
-#include "util.hpp"
+#include "utility/time.hpp"
 #include "client.hpp"
 #include "server.hpp"
 #include "host-handshake.pb.h"

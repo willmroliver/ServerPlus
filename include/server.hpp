@@ -8,21 +8,24 @@
 #include <memory>
 #include "socket.hpp"
 #include "thread-pool.hpp"
+#include "handler.hpp"
 
 using namespace libev;
 
 namespace serv {
 
 class Context;
+class Handler;
 
 class Server {
     private:
+        int status = 0;
         std::string port;
         Socket listen_sock;
         EventBase base;
-        std::unordered_map<evutil_socket_t, std::shared_ptr<Context>> ctx_pool;
         ThreadPool thread_pool;
-        int status = 0;
+        std::unordered_map<evutil_socket_t, std::shared_ptr<Context>> ctx_pool;
+        std::unordered_map<std::string, std::unique_ptr<Handler>> api;
 
         static event_callback_fn accept_callback;
 
@@ -33,6 +36,19 @@ class Server {
         Server(Server &s) = delete;
         Server(Server &&s) = delete;
         ~Server() = default;
+
+        /**
+         * @brief Get the error status of the server. 0 indicates no error.
+         * 
+         * @return int 
+         */
+        inline int get_status() const {
+            return status;
+        };
+        
+        void set_endpoint(std::string path, HandlerFunc cb);
+
+        bool exec_endpoint(std::string path, Context* c);
 
         /**
          * @brief Calls try_listen() and adds a persistent event to listen to & accept connections from the bound sock.
@@ -56,13 +72,6 @@ class Server {
          * @return const EventBase* const 
          */
         EventBase* const get_base();
-
-        /**
-         * @brief Get the error status of the server. 0 indicates no error.
-         * 
-         * @return int 
-         */
-        int get_status() const;
 
         /**
          * @brief Pass any generic function to the thread pool, to later be executed by a thread, passing in the args given.
