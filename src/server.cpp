@@ -47,6 +47,7 @@ void Server::set_endpoint(std::string path, HandlerFunc cb) {
 
 bool Server::exec_endpoint(std::string path, Context* c) {
     if (api.find(path) == api.end()) {
+        Logger::get().log("server: path not found");
         return false;
     }
 

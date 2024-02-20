@@ -6,6 +6,7 @@
 #include <event2/event.h>
 #include <unistd.h>
 #include <crypt/exchange.hpp>
+#include <crypt/crypt.hpp>
 #include "host-handshake.pb.h"
 #include "peer-handshake.pb.h"
 
@@ -16,6 +17,10 @@ class Client {
     private:
         std::string port;
         evutil_socket_t fd;
+        std::vector<char> key;
+        std::vector<char> iv;
+        crpt::Crypt aes { "AES-256-CBC" };
+        bool secure = false;
 
     public:
         Client(): port { "3993" }, fd { 0 } {};
@@ -81,6 +86,7 @@ class Client {
             }
 
             auto host_pk_str = host_hs.public_key();
+            iv = std::vector<char>(host_hs.iv().begin(), host_hs.iv().end());
 
             crpt::Exchange dh { "ffdhe2048" };
             crpt::PublicKeyDER host_pk;
@@ -91,7 +97,24 @@ class Client {
             auto peer_pk = dh.get_public_key().to_vector();
             peer_hs.set_public_key({ peer_pk.begin(), peer_pk.end() });
 
-            return try_send(peer_hs.SerializeAsString());
+            if (!try_send(peer_hs.SerializeAsString())) {
+                return false;
+            }
+
+            auto res = try_recv();
+            if (res.size() != 1 || res[0] != 1) {
+                return false;
+            }
+
+            auto hash_res = crpt::Crypt::hash(dh.get_secret());
+            if (!hash_res.second) {
+                return false;
+            }
+
+            key = hash_res.first;
+            secure = true;
+
+            return true;
         }
 
         bool try_close() {
@@ -106,7 +129,7 @@ class Client {
             return true;
         }
 
-        bool try_send(const std::string req, size_t len = 0) const {
+        bool try_send(const std::string req, size_t len = 0) {
             if (!fd) {
                 return false;
             }
@@ -114,8 +137,22 @@ class Client {
             if (len == 0) {
                 len = req.size() + 1;
             }
-            
-            const char* data = req.c_str();
+
+            const char* data;
+
+            if (secure) {
+                auto [cipher_text, success] = aes.encrypt(std::vector<char>(req.begin(), req.end()), key, iv);
+
+                if (!success) {
+                    return false;
+                }
+
+                data = cipher_text.data();
+                len = cipher_text.size();
+            }
+            else {
+                data = req.c_str();
+            }
 
             auto bytes_sent = 0;
             auto total = 0;
@@ -131,7 +168,7 @@ class Client {
             return true;
         }
 
-        std::string try_recv() const {
+        std::string try_recv() {
             if (!fd) return "";
 
             char buf[BUF_SIZE];
@@ -144,6 +181,11 @@ class Client {
             if (len == 0) {
                 std::cout << "client: peer closed connection" << std::endl;
                 return "";
+            }
+
+            if (secure) {
+                auto [plain_text, success] = aes.decrypt(std::vector<char>(buf, buf + len), key, iv);
+                return { std::string(plain_text.begin(), plain_text.end()), plain_text.size() };
             }
 
             return { buf, len };

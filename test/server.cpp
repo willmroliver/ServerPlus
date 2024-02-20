@@ -4,8 +4,10 @@
 #include "utility/time.hpp"
 #include "client.hpp"
 #include "server.hpp"
+#include "logger.hpp"
 #include "host-handshake.pb.h"
 #include "peer-handshake.pb.h"
+#include "header.pb.h"
 
 #include <thread>
 #include <iostream>
@@ -52,4 +54,22 @@ BOOST_FIXTURE_TEST_CASE( handshake_integration_test, ServerFixture ) {
     BOOST_ASSERT(res.size() == 1 && res[0] == 1);
 
     BOOST_ASSERT(client.try_close());
+}
+
+BOOST_FIXTURE_TEST_CASE( ping_integration_test, ServerFixture ) {
+    client.try_connect();
+    BOOST_ASSERT(client.try_handshake());
+
+    using namespace serv::proto;
+
+    Header ping_header;
+    ping_header.set_type(Header_Type::Header_Type_TYPE_PING);
+    ping_header.set_size(0);
+
+    BOOST_ASSERT(client.try_send(ping_header.SerializeAsString()));
+
+    auto res = client.try_recv();
+    BOOST_ASSERT(ping_header.ParseFromString(res));
+
+    serv::Logger::get().log(std::string("PING: ") + std::to_string(ping_header.timestamp()));
 }
