@@ -5,16 +5,21 @@
 #include <string>
 
 /**
- * Error codes follow the following format: CCNNN
+ * Internal error codes follow the following format: CCNNN
  * 
  * - CC represents a unique class. All error codes prefixed with the same two digits strictly belong to a single class.
  * 
  * - NNN is a unique identifier within each class.
  * - Usually it corresponds to the order of appearance in code, though this is not a hard rule.
  * 
- * Error codes not belonging to a specific class can be expected to simply drop CC, so are 3-digits: NNN.
+ * Internal error codes not belonging to a specific class should be prepended with 10, thus all following the format 10NNN.
  * 
+ * It follows from this formatting that error codes built on top of this library, 
+ * such as for use in user-defined handlers, ought to consider numbers 10001 - 99999 reserved.
  */
+
+// General
+constexpr int ERR_UNKNOWN = 10001;  // In practice, we should always endeavour to use a more informative error code than this...
 
 // Socket
 constexpr int ERR_SOCKET_GET_ADDR_INFO_FAILED = 11001;
@@ -47,6 +52,9 @@ constexpr int ERR_CONTEXT_PING_FAILED = 13004;
 constexpr int ERR_SERVER_ACCEPT_CONN_FAILED = 13003;
 
 static std::unordered_map<int, std::string> error_messages = {
+    // General
+    { ERR_UNKNOWN, "Unknown error occurred." },
+
     // Socket
     { ERR_SOCKET_GET_ADDR_INFO_FAILED, "Socket: failed to find address information." },
     { ERR_SOCKET_BIND_SOCKET_FAILED, "Socket: failed to open and bind socket." },

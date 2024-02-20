@@ -41,6 +41,19 @@ Server::Server(std::string port, unsigned thread_count):
     thread_pool { thread_count }
 {}
 
+void Server::set_endpoint(std::string path, HandlerFunc cb) {
+    api[path] = std::make_unique<Handler>(this, path, cb);
+}
+
+bool Server::exec_endpoint(std::string path, Context* c) {
+    if (api.find(path) == api.end()) {
+        return false;
+    }
+
+    api[path]->exec(c);
+    return true;
+}
+
 void Server::run() {
     if (!listen_sock.try_listen(port)) {
         status = -1;
@@ -82,8 +95,4 @@ void Server::stop() {
 
 EventBase* const Server::get_base() {
     return &base;
-}
-
-int Server::get_status() const {
-    return status;
 }

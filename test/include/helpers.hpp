@@ -6,10 +6,6 @@
 #include <boost/test/unit_test.hpp>
 #include "logger.hpp"
 
-/**
- * @brief This function should only perform generic initialization/clean-up tasks, 
- * so that any test may utilize it if needed.
- */
 inline void clear_logger() {
     serv::Logger::get().clear_buf();
 }

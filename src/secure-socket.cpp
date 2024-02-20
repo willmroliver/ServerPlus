@@ -45,10 +45,6 @@ bool SecureSocket::handshake_final() {
     auto [nbytes, full] = sock->try_recv();
 
     if (nbytes < 1) {
-        if (nbytes == -1) {
-            // error
-        }
-
         return false;
     }
 
@@ -58,7 +54,6 @@ bool SecureSocket::handshake_final() {
     std::string data { bytes.begin(), bytes.end() - 1 };    // - 1 to exclude the null delimiter
 
     if (!handshake.ParseFromString(data)) {
-        // error
         Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_PARSE_FAILED);
         return false;
     }
@@ -69,7 +64,6 @@ bool SecureSocket::handshake_final() {
     peer_pk.from_vector({ pk_str.begin(), pk_str.end() });
 
     if (!dh.derive_secret(peer_pk)) {
-        // error
         Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_DERIVE_FAILED);
         return false;
     }
@@ -78,7 +72,6 @@ bool SecureSocket::handshake_final() {
     auto [secret_hash, success] = crpt::Crypt::hash(shared_secret);
 
     if (!success) {
-        // error
         Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_HASH_FAILED);
         return false;
     }
@@ -110,7 +103,6 @@ std::pair<int, bool> SecureSocket::try_recv() {
     }
 
     if (sock_recv.first < 1) {
-        // error
         return sock_recv;
     }
 
@@ -118,7 +110,6 @@ std::pair<int, bool> SecureSocket::try_recv() {
     auto [plain_text, success] = aes.decrypt(cipher_text, key, iv);
 
     if (!(success && buf.write(plain_text))) {
-        // error
         Logger::get().error(ERR_SECURE_SOCKET_RECV_FAILED);
         return { -1, sock_recv.second };
     }
@@ -135,7 +126,6 @@ bool SecureSocket::try_send(std::string data) {
     auto [cipher_text, success] = aes.encrypt(plain_text, key, iv);
 
     if (!success) {
-        // error
         Logger::get().error(ERR_SECURE_SOCKET_SEND_FAILED);
         return false;
     }
