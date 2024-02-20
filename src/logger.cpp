@@ -1,5 +1,6 @@
 #include <mutex>
 #include "logger.hpp"
+#include "utility/time.hpp"
 #include "error-codes.hpp"
 
 using namespace serv;
@@ -55,9 +56,7 @@ Logger::Logger():
 
 uint64_t Logger::sys_time() const {
     using namespace std::chrono;
-    const auto st = system_clock::now();
-    const auto duration = st.time_since_epoch();
-    return duration_cast<milliseconds>(duration).count();
+    return util::sys_timestamp<milliseconds>();
 }
 
 const std::pair<uint64_t, std::string> Logger::log(const std::string& msg, bool flush) {

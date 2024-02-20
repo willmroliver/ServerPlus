@@ -62,20 +62,7 @@ Context::Context(Server* server, std::shared_ptr<Socket>& s):
 }
 
 void Context::handle_request() {
-
-}
-
-void Context::do_error(int err_code) {
-    auto &[ts, msg] = Logger::get().error(err_code);
-
-    proto::Error err;
-    err.set_code(err_code);
-    err.set_message(msg);
-    err.set_timestamp(ts);
-
-    if (!sock.try_send(err.SerializeAsString())) {
-        Logger::get().error(ERR_CONTEXT_DO_ERROR_FAILED);
-    }
+    if (!server->exec_endpoint())
 }
 
 void Context::reset() {
@@ -107,7 +94,7 @@ void Context::handle_read_event() {
 
     if (header_parsed) {
         request_data = sock.read_buffer();
-
+        
         if (request_data.size()) {
             handle_request();
             reset();
@@ -150,5 +137,18 @@ void Context::handle_read_event() {
         do_error(ERR_CONTEXT_BUFFER_FULL);
         sock.clear_buffer();
         reset();
+    }
+}
+
+void Context::do_error(int err_code) {
+    auto &[ts, msg] = Logger::get().error(err_code);
+
+    proto::Error err;
+    err.set_code(err_code);
+    err.set_message(msg);
+    err.set_timestamp(ts);
+
+    if (!sock.try_send(err.SerializeAsString())) {
+        Logger::get().error(ERR_CONTEXT_DO_ERROR_FAILED);
     }
 }
