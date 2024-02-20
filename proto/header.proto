@@ -4,9 +4,15 @@ package serv.proto;
 
 /* This header should precede all usual requests from a peer to the host */
 message Header {
+    enum Type {
+        TYPE_UNSPEC = 0;
+        TYPE_PING = 1;
+        TYPE_HANDSHAKE = 2;
+        TYPE_REQUEST = 3;
+    }
 
     /* @TODO: This ought to be an enum */
-    string type = 1;
+    Type type = 1;
 
     /* The size of the message following, in bytes */
     int32 size = 2;

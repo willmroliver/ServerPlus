@@ -62,10 +62,13 @@ Context::Context(Server* server, std::shared_ptr<Socket>& s):
 }
 
 void Context::handle_request() {
-    if (!server->exec_endpoint())
+    if (!server->exec_endpoint(header.path(), this)) {
+        do_error(ERR_CONTEXT_HANDLE_REQUEST_FAILED);
+    }
 }
 
 void Context::reset() {
+    request_data = "";
     header_data = "";
     header_parsed = false;
 }
@@ -119,12 +122,18 @@ void Context::handle_read_event() {
             return;
         }
 
-        if (header.type() == "ping") {
+        if (header.type() == proto::Header_Type::Header_Type_TYPE_PING) {
             if (!sock.try_send(header_data)) {
                 do_error(ERR_CONTEXT_PING_FAILED);
                 Logger::get().error("server: context: send ping failed");
             }
 
+            reset();
+            return;
+        }
+
+        if (header.size() == 0) {
+            handle_request();
             reset();
             return;
         }
