@@ -21,6 +21,7 @@ Socket::~Socket() {
 }
 
 bool Socket::try_listen(std::string port, int family, int socktype, int flags) { 
+
     if (fd != 0) return false;
 
     addrinfo hints, *ai, *p;

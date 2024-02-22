@@ -52,7 +52,7 @@ void tiny_sleep() {
 
 BOOST_FIXTURE_TEST_CASE( test_secure_socket_handshake_final, SecureSockFixture ) {
     sender.handshake_init();
-    client.try_handshake();
+    client.handshake_init();
 
     tiny_sleep();
     BOOST_ASSERT( sender.handshake_final() );

@@ -20,6 +20,7 @@ class Client {
         std::vector<char> key;
         std::vector<char> iv;
         crpt::Crypt aes { "AES-256-CBC" };
+        crpt::Exchange dh { "ffdhe2048" };
         bool secure = false;
 
     public:
@@ -78,7 +79,7 @@ class Client {
          * @brief Convenience function to perform a correct peer handshake response.
          * An integration test for the sequence of calls made by this function exists in test/server.cpp.
          */
-        bool try_handshake() {
+        bool handshake_init() {
             serv::proto::HostHandshake host_hs;
 
             if (!host_hs.ParseFromString(try_recv())) {
@@ -88,7 +89,7 @@ class Client {
             auto host_pk_str = host_hs.public_key();
             iv = std::vector<char>(host_hs.iv().begin(), host_hs.iv().end());
 
-            crpt::Exchange dh { "ffdhe2048" };
+            dh = crpt::Exchange("ffdhe2048");
             crpt::PublicKeyDER host_pk;
 
             host_pk.from_vector({ host_pk_str.begin(), host_pk_str.end() });
@@ -101,6 +102,10 @@ class Client {
                 return false;
             }
 
+            return true;
+        }
+
+        bool handshake_final() {
             auto res = try_recv();
             if (res.size() != 1 || res[0] != 1) {
                 return false;
