@@ -16,6 +16,9 @@ namespace serv {
 
 class Server;
 
+/**
+ * @brief Encapsulates the state of an accepted connection, managing data reading and writing over arbitrarily many send & receive operations.
+ */
 class Context {
     private:
         Server* server;
