@@ -15,7 +15,7 @@ class LobbyInterface {
         virtual void clear_user(const std::string& uid) = 0;
         virtual bool mutate(std::string& mutation, std::string& unitary) = 0;
         virtual bool mutate(std::string& mutation) = 0;
-}
+};
 
 template <typename Shared, typename Unitary>
 class Lobby : public LobbyInterface {
@@ -81,7 +81,7 @@ class Lobby : public LobbyInterface {
         bool mutate(std::function<bool(Shared&)> cb) {
             return cb(lobby_state);
         }
-}
+};
 
 }
 
