@@ -46,8 +46,22 @@ class Server {
             return status;
         };
         
+        /**
+         * @brief Assigns the handler callback to the path. Requests to the path will execute the callback given.
+         * 
+         * @param path The path to assign the callback to. Corresponds to the proto::Header 'path' field.
+         * @param cb The callback to execute when this path is requested.
+         */
         void set_endpoint(std::string path, HandlerFunc cb);
 
+        /**
+         * @brief If a callback has been assigned to the 'path' requested, exec_endpoints passes the context to the callback and executes; else returns false.
+         * 
+         * @param path The path to assign the callback to. Corresponds to the proto::Header 'path' field.
+         * @param c The context of the current connection.
+         * @return true The path exists in the API.
+         * @return false The path does not exist.
+         */
         bool exec_endpoint(std::string path, Context* c);
 
         /**
