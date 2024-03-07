@@ -81,6 +81,13 @@ class SecureSocket {
         std::string read_buffer();
 
         /**
+         * @brief Empties and returns the entire content of the buffer.
+         * 
+         * @return std::vector<char> 
+         */
+        std::vector<char> flush_buffer();
+
+        /**
          * @brief Clears the socket buffer memory and resets internal state.
          */
         void clear_buffer();
