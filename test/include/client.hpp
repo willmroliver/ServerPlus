@@ -76,7 +76,7 @@ class Client {
         }
 
         /**
-         * @brief Convenience function to perform a correct peer handshake response.
+         * @brief Convenience function to initialise a correct peer handshake response.
          * An integration test for the sequence of calls made by this function exists in test/server.cpp.
          */
         bool handshake_init() {
@@ -85,16 +85,19 @@ class Client {
             if (!host_hs.ParseFromString(try_recv())) {
                 return false;
             }
-
-            auto host_pk_str = host_hs.public_key();
+            
+            dh = crpt::Exchange("ffdhe2048");
             iv = std::vector<char>(host_hs.iv().begin(), host_hs.iv().end());
 
-            dh = crpt::Exchange("ffdhe2048");
             crpt::PublicKeyDER host_pk;
-
+            auto host_pk_str = host_hs.public_key();
             host_pk.from_vector({ host_pk_str.begin(), host_pk_str.end() });
-            serv::proto::PeerHandshake peer_hs;
 
+            if (!dh.derive_secret(host_pk)) {
+                return false;
+            }
+
+            serv::proto::PeerHandshake peer_hs;
             auto peer_pk = dh.get_public_key().to_vector();
             peer_hs.set_public_key({ peer_pk.begin(), peer_pk.end() });
 
@@ -105,18 +108,22 @@ class Client {
             return true;
         }
 
+        /**
+         * @brief Convenience function to finalise a correct peer handshake response.
+         * An integration test for the sequence of calls made by this function exists in test/server.cpp.
+         */
         bool handshake_final() {
             auto res = try_recv();
             if (res.size() != 1 || res[0] != 1) {
                 return false;
             }
 
-            auto hash_res = crpt::Crypt::hash(dh.get_secret());
-            if (!hash_res.second) {
+            auto [secret_hash, success] = crpt::Crypt::hash(dh.get_secret());
+            if (!success) {
                 return false;
             }
 
-            key = hash_res.first;
+            key = secret_hash;
             secure = true;
 
             return true;
@@ -142,7 +149,8 @@ class Client {
             if (len == 0) {
                 len = req.size() + 1;
             }
-
+            
+            std::vector<char> cipher_text_cpy;
             const char* data;
 
             if (secure) {
@@ -152,8 +160,22 @@ class Client {
                     return false;
                 }
 
-                data = cipher_text.data();
+                cipher_text_cpy = cipher_text;
+                data = cipher_text_cpy.data();
                 len = cipher_text.size();
+
+                auto print_bytes = [] (std::vector<char> bytes) {
+                    std::cout << "clnt: ";
+                    for (const auto b : bytes) std::cout << std::to_string(static_cast<int>(b)) << ", ";
+                    std::cout << std::endl;
+                };
+
+                print_bytes(key);
+                print_bytes(iv);
+                print_bytes(cipher_text);
+                std::cout << std::endl;
+
+                std::cout << "num bytes key: " << (key.size() * 8) << std::endl;
             }
             else {
                 data = req.c_str();
@@ -167,6 +189,7 @@ class Client {
                     perror("send");
                     return false;
                 }
+
                 total += bytes_sent;
             }
 

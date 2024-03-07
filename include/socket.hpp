@@ -135,7 +135,7 @@ class Socket {
         /**
          * @brief Empties and returns the entire content of the buffer.
          * 
-         * @return std::string 
+         * @return std::vector<char> 
          */
         std::vector<char> flush_buffer();
 
