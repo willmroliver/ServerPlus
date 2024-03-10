@@ -163,19 +163,6 @@ class Client {
                 cipher_text_cpy = cipher_text;
                 data = cipher_text_cpy.data();
                 len = cipher_text.size();
-
-                auto print_bytes = [] (std::vector<char> bytes) {
-                    std::cout << "clnt: ";
-                    for (const auto b : bytes) std::cout << std::to_string(static_cast<int>(b)) << ", ";
-                    std::cout << std::endl;
-                };
-
-                print_bytes(key);
-                print_bytes(iv);
-                print_bytes(cipher_text);
-                std::cout << std::endl;
-
-                std::cout << "num bytes key: " << (key.size() * 8) << std::endl;
             }
             else {
                 data = req.c_str();
@@ -212,8 +199,9 @@ class Client {
             }
 
             if (secure) {
+                auto cipher_text = std::vector<char>(buf, buf + len);
                 auto [plain_text, success] = aes.decrypt(std::vector<char>(buf, buf + len), key, iv);
-                return { std::string(plain_text.begin(), plain_text.end()), plain_text.size() };
+                return std::string(plain_text.begin(), plain_text.end());
             }
 
             return { buf, len };

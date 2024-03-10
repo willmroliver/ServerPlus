@@ -75,5 +75,5 @@ BOOST_FIXTURE_TEST_CASE( ping_integration_test, ServerFixture ) {
     auto res = client.try_recv();
     BOOST_ASSERT(ping_header.ParseFromString(res));
 
-    serv::Logger::get().log(std::string("PING: ") + std::to_string((ping_ts() - ping_header.timestamp())));
+    serv::Logger::get().log("PING: " + std::to_string(ping_ts() - ping_header.timestamp()));
 }
