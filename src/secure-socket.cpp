@@ -108,16 +108,6 @@ std::pair<int, bool> SecureSocket::try_recv() {
 
     auto cipher_text = sock->flush_buffer();
 
-    auto print_bytes = [] (std::vector<char> bytes) {
-        std::cout << "sock: ";
-        for (const auto b : bytes) std::cout << std::to_string(static_cast<int>(b)) << ", ";
-        std::cout << std::endl;
-    };
-
-    print_bytes(key);
-    print_bytes(iv);
-    print_bytes(cipher_text);
-
     auto [plain_text, success] = aes.decrypt(cipher_text, key, iv);
 
     if (!(success && buf.write(plain_text))) {
