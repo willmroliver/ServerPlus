@@ -74,15 +74,15 @@ void Server::run() {
 }
 
 void Server::accept_connection() {
-    auto sock = std::make_shared<Socket>();
+    SecureSocket sock;
 
-    if (!listen_sock.try_accept(*sock)) {
+    if (!listen_sock.try_accept(sock)) {
         Logger::get().error(ERR_SERVER_ACCEPT_CONN_FAILED);
-        Logger::get().error("server: accept_connection: failed on sock " + std::to_string(sock->get_fd()));
+        Logger::get().error("server: accept_connection: failed on sock " + std::to_string(sock.get_fd()));
         return;
     }
 
-    ctx_pool[sock->get_fd()] = std::make_shared<Context>(this, sock);
+    ctx_pool.emplace(sock.get_fd(), std::make_shared<Context>(this, std::move(sock)));
 }
 
 void Server::stop() {

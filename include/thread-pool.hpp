@@ -13,11 +13,11 @@ namespace serv {
 
 class ThreadPool {
     private:
-        std::vector<std::thread> pool;
-        std::vector<std::future<void>> thread_futures;
-        std::queue<std::function<void()>> queue;
         std::mutex queue_mutex;
+        std::queue<std::function<void()>> queue;
         std::condition_variable condition;
+        std::vector<std::future<void>> thread_futures;
+        std::vector<std::thread> pool;
         bool run;
 
     public:

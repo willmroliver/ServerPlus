@@ -16,12 +16,60 @@ Socket::Socket():
     std::memset(&addr, 0, addr_len);
 }
 
+Socket::Socket(Socket& sock): 
+    fd { sock.fd },
+    listening { sock.listening },
+    addr { sock.addr },
+    addr_len { sock.addr_len },
+    buf { sock.buf }
+{}
+
+Socket::Socket(Socket&& sock): 
+    fd { sock.fd },
+    listening { sock.listening },
+    addr { sock.addr },
+    addr_len { sock.addr_len },
+    buf { sock.buf }
+{
+    sock.fd = 0;
+    sock.listening = false;
+    std::memset(&sock.addr, 0, sock.addr_len);
+    sock.addr_len = 0;
+    sock.buf.clear();
+}
+
+Socket& Socket::operator=(Socket& sock) {
+    fd = sock.fd;
+    listening = sock.listening;
+    addr = sock.addr;
+    addr_len = sock.addr_len;
+    buf = sock.buf;
+    return *this;
+}
+
+Socket& Socket::operator=(Socket&& sock) {
+    fd = sock.fd;
+    listening = sock.listening;
+    addr = sock.addr;
+    addr_len = sock.addr_len;
+    buf = sock.buf;
+
+    sock.fd = 0;
+    sock.listening = false;
+    std::memset(&sock.addr, 0, sock.addr_len);
+    sock.addr_len = 0;
+    sock.buf.clear();
+    
+    return *this;
+}
+
 Socket::~Socket() {
-    close(fd);
+    if (fd > 2) {
+        close(fd);
+    }
 }
 
 bool Socket::try_listen(std::string port, int family, int socktype, int flags) { 
-
     if (fd != 0) return false;
 
     addrinfo hints, *ai, *p;
