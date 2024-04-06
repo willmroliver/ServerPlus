@@ -1,6 +1,7 @@
 #include <crypt/util.hpp>
 #include <crypt/public-key-der.hpp>
 #include <crypt/error.hpp>
+#include <event2/util.h>
 #include "secure-socket.hpp"
 #include "socket.hpp"
 #include "socket.hpp"
@@ -11,13 +12,44 @@
 
 using namespace serv;
 
-SecureSocket::SecureSocket(std::shared_ptr<Socket>& sock): 
-    sock { sock }
+SecureSocket::SecureSocket(): 
+    Socket {}
 {}
 
-SecureSocket::SecureSocket(std::shared_ptr<Socket>&& sock): 
-    sock { sock }
+SecureSocket::SecureSocket(SecureSocket& sock): 
+    Socket { sock },
+    aes { "AES-256-CBC" },
+    dh { "ffdhe2048" },
+    shared_secret { sock.shared_secret },
+    key { sock.key },
+    iv { sock.iv },
+    is_secure { sock.is_secure }
 {}
+
+SecureSocket::SecureSocket(SecureSocket&& sock): 
+    Socket { std::move(sock) },
+    aes { "AES-256-CBC" },
+    dh { "ffdhe2048" },
+    shared_secret { sock.shared_secret },
+    key { sock.key },
+    iv { sock.iv },
+    is_secure { sock.is_secure }
+{
+    sock.shared_secret = {};
+    sock.key = {};
+    sock.iv = {};
+    sock.is_secure = false;
+}
+
+SecureSocket& SecureSocket::operator=(SecureSocket& sock) {
+    Socket::operator=(sock);
+    return *this;
+}
+
+SecureSocket& SecureSocket::operator=(SecureSocket&& sock) {
+    Socket::operator=(std::move(sock));
+    return *this;
+}
 
 bool SecureSocket::handshake_init() {
     is_secure = false;
@@ -33,7 +65,7 @@ bool SecureSocket::handshake_init() {
 
     auto data = handshake.SerializeAsString();
 
-    if (!sock->try_send(data)) {
+    if (!Socket::try_send(data)) {
         Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_INIT_FAILED);
         return false;
     }
@@ -42,7 +74,7 @@ bool SecureSocket::handshake_init() {
 }
 
 bool SecureSocket::handshake_final() {
-    auto [nbytes, full] = sock->try_recv();
+    auto [nbytes, full] = Socket::try_recv();
 
     if (nbytes < 1) {
         return false;
@@ -50,7 +82,7 @@ bool SecureSocket::handshake_final() {
 
     serv::proto::PeerHandshake handshake;
 
-    auto bytes = sock->flush_buffer();
+    auto bytes = Socket::flush_buffer();
     std::string data { bytes.begin(), bytes.end() - 1 };    // - 1 to exclude the null delimiter
 
     if (!handshake.ParseFromString(data)) {
@@ -80,7 +112,7 @@ bool SecureSocket::handshake_final() {
     is_secure = true;
 
     // Let's send a single byte, value 1, to indicate the success of the handshake.
-    if (!sock->try_send(std::vector<char> { 1 })) {
+    if (!Socket::try_send(std::vector<char> { 1 })) {
         Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED);
         return false;
     }
@@ -90,12 +122,12 @@ bool SecureSocket::handshake_final() {
 
 std::pair<int, bool> SecureSocket::try_recv() {
     if (!is_secure) {
-        sock->try_recv();
-        sock->clear_buffer();
+        Socket::try_recv();
+        Socket::clear_buffer();
         return { -2, false };
     }
 
-    auto sock_recv = sock->try_recv();
+    auto sock_recv = Socket::try_recv();
 
     if (!sock_recv.second) {
         Logger::get().error(ERR_SECURE_SOCKET_RECV_FAILED);
@@ -106,8 +138,7 @@ std::pair<int, bool> SecureSocket::try_recv() {
         return sock_recv;
     }
 
-    auto cipher_text = sock->flush_buffer();
-
+    auto cipher_text = Socket::flush_buffer();
     auto [plain_text, success] = aes.decrypt(cipher_text, key, iv);
 
     if (!(success && buf.write(plain_text))) {
@@ -131,7 +162,7 @@ bool SecureSocket::try_send(std::string data) {
         return false;
     }
 
-    if (!sock->try_send(cipher_text)) {
+    if (!Socket::try_send(cipher_text)) {
         Logger::get().error(ERR_SECURE_SOCKET_SEND_FAILED);
         return false;
     }
@@ -158,6 +189,6 @@ std::vector<char> SecureSocket::flush_buffer() {
 }
 
 void SecureSocket::clear_buffer() {
-    sock->clear_buffer();
+    Socket::clear_buffer();
     buf.clear();
 }

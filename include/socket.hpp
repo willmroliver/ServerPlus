@@ -18,7 +18,7 @@ namespace serv {
  * [This should probably have been encapsulated in its own wrapper library, but it works, and there's not much memory-management going on]
  */
 class Socket {
-    private: 
+    protected:
         evutil_socket_t fd;
         bool listening;
         sockaddr_storage addr;
@@ -27,10 +27,10 @@ class Socket {
     
     public:
         Socket();
-        Socket(Socket& sock) = default;
-        Socket(Socket&& sock) = default;
-        Socket& operator=(Socket& sock) = default;
-        Socket& operator=(Socket&& sock) = default;
+        Socket(Socket& sock);
+        Socket(Socket&& sock);
+        Socket& operator=(Socket& sock);
+        Socket& operator=(Socket&& sock);
         ~Socket();
 
         inline const evutil_socket_t get_fd() const {

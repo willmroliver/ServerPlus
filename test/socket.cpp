@@ -28,6 +28,7 @@ void do_try_listen_test(const TryListenTestCase& test) {
     serv::Socket sock;
 
     auto res = sock.try_listen(test.port, test.family, test.socktype, test.flags);
+
     BOOST_ASSERT( res == test.expecting );
     ASSERT_ERR_LOGGED( test.errors );
 }

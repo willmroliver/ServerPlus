@@ -15,13 +15,13 @@ using namespace serv;
  */
 event_callback_fn Context::receive_callback = [] (evutil_socket_t fd, short flags, void* arg) {
     auto ctx = static_cast<Context*>(arg);
-    if (ctx == nullptr) {
+    if (ctx == nullptr || ctx->server == nullptr) {
         return;
     }
 
     ctx->server->allocate_work([&ctx] () {
-        ctx->handle_read_event();
-        ctx->event.add();
+        ctx->read_sock();
+        ctx->event->add();
     });
 };
 
@@ -33,10 +33,13 @@ event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short fl
 
     if (ctx->sock.handshake_final()) {
         ctx->new_read_event();
-        
-        if (!ctx->event.add()) {
-            ctx->server->get_base()->dump_status();
+
+        if (ctx->event->add()) {
             return;
+        }
+
+        if (ctx->server != nullptr) {
+            ctx->server->get_base()->dump_status();
         }
     }
     else {
@@ -45,25 +48,18 @@ event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short fl
     }
 };
 
-Context::Context(Server* server, std::shared_ptr<Socket>& s):
-    server { server },
-    sock { s },
-    event { new_handshake_event() }
-{
-    if (!sock.handshake_init()) {
-        Logger::get().error("server: handshake_init failed");
-        return;
-    }
-
-    if (!event.add()) {
-        server->get_base()->dump_status();
-        return;
+void Context::new_event(short what, event_callback_fn cb) {
+    if (server != nullptr) {
+        event = std::make_unique<Event>(server->get_base()->new_event(sock.get_fd(), what, cb, this));
     }
 }
 
 void Context::handle_request() {
-    if (!server->exec_endpoint(header.path(), this)) {
+    if (server == nullptr || !server->exec_endpoint(header.path(), this)) {
         do_error(ERR_CONTEXT_HANDLE_REQUEST_FAILED);
+    } else {
+        // @todo exec_endpoint should return a promise, on which we block until resolved!
+        reset();
     }
 }
 
@@ -73,11 +69,28 @@ void Context::reset() {
     header_parsed = false;
 }
 
-Event Context::new_event(short what, event_callback_fn cb) {
-    return server->get_base()->new_event(sock.get_sock()->get_fd(), what, cb, this);
+Context::Context(Server* server, SecureSocket&& s):
+    server { server },
+    sock { std::move(s) }
+{   
+    if (server == nullptr) {
+        return;
+    }
+
+    new_handshake_event();
+
+    if (!sock.handshake_init()) {
+        Logger::get().error("server: handshake_init failed");
+        return;
+    }
+
+    if (!event->add()) {
+        server->get_base()->dump_status();
+        return;
+    }
 }
 
-void Context::handle_read_event() {
+void Context::read_sock() {
     auto [nbytes, full] = sock.try_recv();
 
     switch (nbytes) {
@@ -100,7 +113,6 @@ void Context::handle_read_event() {
         
         if (request_data.size()) {
             handle_request();
-            reset();
             return;
         }
 
@@ -134,7 +146,6 @@ void Context::handle_read_event() {
 
         if (header.size() == 0) {
             handle_request();
-            reset();
             return;
         }
 
