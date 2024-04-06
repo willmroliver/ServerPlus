@@ -153,7 +153,8 @@ class Buffer {
         size_t find(std::string& match) const {
             auto n = match.length();
 
-            if (is_empty()
+            if (
+                is_empty()
                 || (begin < end && end - begin < n) 
                 || (begin > end && (T - begin + end) < n)
                 || n == 0

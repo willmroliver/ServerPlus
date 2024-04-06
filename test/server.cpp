@@ -59,17 +59,16 @@ BOOST_FIXTURE_TEST_CASE( handshake_integration_test, ServerFixture ) {
 BOOST_FIXTURE_TEST_CASE( ping_integration_test, ServerFixture ) {
     client.try_connect();
     client.handshake_init();
+
     BOOST_ASSERT(client.handshake_final());
 
     using namespace serv::proto;
-
-    auto ping_ts = serv::util::sys_timestamp<std::chrono::nanoseconds>;
+    auto ping_ts = serv::util::sys_timestamp<std::chrono::microseconds>;
 
     Header ping_header;
     ping_header.set_type(Header_Type::Header_Type_TYPE_PING);
     ping_header.set_size(0);
     ping_header.set_timestamp(ping_ts());
-
     BOOST_ASSERT(client.try_send(ping_header.SerializeAsString()));
 
     auto res = client.try_recv();

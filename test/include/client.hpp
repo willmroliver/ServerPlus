@@ -188,11 +188,13 @@ class Client {
 
             char buf[BUF_SIZE];
             unsigned len;
+
             
             if ((len = recvfrom(fd, buf, BUF_SIZE, 0, nullptr, 0)) == -1) {
                 perror("recvfrom");
                 return "";
             } 
+
             if (len == 0) {
                 std::cout << "client: peer closed connection" << std::endl;
                 return "";
