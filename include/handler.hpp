@@ -8,6 +8,7 @@ namespace serv {
 
 class Server;
 class Context;
+class Handler;
 
 using HandlerFunc = std::function<void(Server*, Context*)>;
 

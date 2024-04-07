@@ -29,7 +29,7 @@ class Context {
         proto::Header header;
         static event_callback_fn receive_callback;
         static event_callback_fn handshake_callback;
-        bool header_parsed;
+        bool header_parsed = false;
 
         /**
          * @brief Adds a new event to the server event base for this socket, passing itself as the arg.
@@ -43,7 +43,7 @@ class Context {
          * @brief Adds a new receive event to the underlying socket; triggers the Context::receive_callback when data is available.
          */
         inline void new_read_event() {
-            new_event(EV_READ, receive_callback);
+            new_event(EV_READ|EV_PERSIST, receive_callback);
         }
         
         /**
@@ -70,6 +70,13 @@ class Context {
          * @brief Reads available data from the sock stream, then attempts to parse a header and request from the contents of the socket buffer
          */
         void read_sock();
+
+        /**
+         * @brief Sends data to the client via the open sock stream.
+         * 
+         * @param data Data to send to the client
+         */
+        bool send_message(const std::string& data);
 
         /**
          * @brief Logs and returns an error status to the peer

@@ -10,7 +10,7 @@
 #include "error.pb.h"
 
 struct ContextFixture {
-    test::Client<1024> client;
+    test::Client client;
     serv::Socket listener;
     libev::EventBase base;
     serv::SecureSocket sock;

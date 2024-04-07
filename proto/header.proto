@@ -11,7 +11,7 @@ message Header {
         TYPE_REQUEST = 3;
     }
 
-    /* @TODO: This ought to be an enum */
+    /* The type of incoming message */
     Type type = 1;
 
     /* The size of the message following, in bytes */
