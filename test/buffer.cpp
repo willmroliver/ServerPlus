@@ -1,6 +1,5 @@
 #include <boost/test/unit_test.hpp>
 #include <string>
-
 #include "buffer.hpp"
 
 /**
@@ -54,6 +53,8 @@ void offset_buffer(serv::Buffer<T>& b, unsigned offset) {
     b.read(offset);
 }
 
+template void offset_buffer<16>(serv::Buffer16& b, unsigned offset);
+
 struct WriteTestCase {
     std::string initial;
     size_t write_size;
@@ -70,7 +71,7 @@ WriteTestCase write_tests[] = {
 };
 
 void do_write_test(WriteTestCase& test) {
-    serv::Buffer<16> buffer (test.initial);
+    serv::Buffer16 buffer (test.initial);
 
     auto [n, can_write] = buffer.write(write_cb, test.write_size);
 
@@ -98,7 +99,7 @@ ReadTestCase read_tests[] = {
 };
 
 void do_read_test(ReadTestCase& test) {
-    serv::Buffer<16> buffer (test.initial);
+    serv::Buffer16 buffer (test.initial);
 
     auto res_bytes = buffer.read(test.read_size);
     std::string result { res_bytes.begin(), res_bytes.end() };
@@ -121,7 +122,7 @@ BOOST_AUTO_TEST_CASE ( buffer_read_table_test ) {
  * 
  */
 BOOST_AUTO_TEST_CASE ( buffer_read_write_test ) {
-    serv::Buffer<16> buffer;
+    serv::Buffer16 buffer;
 
     // in buffer: |1234 5678 1234 5678>
     auto [n, can_write] = buffer.write(write_cb, 19);
@@ -197,7 +198,7 @@ FindTestCase find_tests[] = {
 };
 
 void do_find_test(FindTestCase& test) {
-    serv::Buffer<16> buffer;
+    serv::Buffer16 buffer;
 
     if (test.offset) {
         offset_buffer<16>(buffer, test.offset);
@@ -257,7 +258,7 @@ ReadToTestCase read_to_tests[] = {
 };
 
 void do_read_to_test(ReadToTestCase& test) {
-    serv::Buffer<16> buffer;
+    serv::Buffer16 buffer;
 
     if (test.offset) {
         offset_buffer<16>(buffer, test.offset);
@@ -290,4 +291,86 @@ void do_read_to_test(ReadToTestCase& test) {
 
 BOOST_AUTO_TEST_CASE( buffer_read_to_table_test ) {
     for (auto &test : read_to_tests) do_read_to_test(test);
+}
+
+struct ReadFromTestCase {
+    int arg;
+    unsigned offset;
+    std::string initial;
+    std::string expecting;
+};
+
+ReadFromTestCase read_from_tests[] = {
+    { 0, 0, "", "" },
+    { 1, 0, "", "" },
+    { 1, 0, "1", "" },
+    { 4, 0, "1234", "" },
+    { 4, 4, "12345678", "5678" },
+    { 4, 12, "123456789999", "56789999" },
+    { 4, 15, "123456789999", "56789999" },
+    { 4, 16, "123456789999", "56789999" },
+    { 4, 17, "123456789999", "56789999" },
+    { 1, 4, "123456789999", "23456789999" },
+    { 1, 12, "123456789999", "23456789999" },
+    { 1, 15, "123456789999", "23456789999" },
+    { 1, 16, "123456789999", "23456789999" },
+    { 1, 17, "123456789999", "23456789999" },
+    { 1, 15, "1", "" },
+    { 1, 16, "1", "" },
+    { 1, 17, "1", "" },
+    { 0, 15, "1", "1" },
+    { 0, 16, "1", "1" },
+    { 0, 17, "1", "1" },
+    { 1, 15, "12", "2" },
+    { 1, 16, "12", "2" },
+    { 1, 17, "12", "2" },
+    { 0, 16, "12", "12" },
+    { 0, 15, "12", "12" },
+    { 0, 17, "12", "12" },
+    { 4, 128 + 15, "123456789999", "56789999" },
+    { 4, 128 + 16, "123456789999", "56789999" },
+    { 4, 128 + 17, "123456789999", "56789999" },
+    { 1, 128 + 4, "123456789999", "23456789999" },
+    { 1, 128 + 12, "123456789999", "23456789999" },
+    { 1, 128 + 15, "123456789999", "23456789999" },
+    { 1, 128 + 16, "123456789999", "23456789999" },
+    { 1, 128 + 17, "123456789999", "23456789999" },
+    { 1, 128 + 16, "1", "" },
+    { 1, 128 + 16, "12", "2" },
+    { 1, 128 + 15, "1", "" },
+    { -1, 128 + 4, "123456789999", "9" },
+    { -2, 128 + 12, "123456789999", "99" },
+    { -3, 128 + 15, "123456789999", "999" },
+    { -4, 128 + 16, "123456789999", "9999" },
+    { -12, 128 + 17, "123456789999", "123456789999" },
+    { -1, 0, "", "" },
+    { -1, 0, "1", "1" },
+    { -4, 0, "1234", "1234" },
+    { -4, 4, "12345678", "5678" },
+    { -4, 12, "123456789999", "9999" },
+};
+
+void do_read_from_test(ReadFromTestCase& test) {
+    serv::Buffer16 buffer;
+    offset_buffer<16>(buffer, test.offset);
+
+    std::vector<char> data(test.initial.begin(), test.initial.end());
+    buffer.write(data);
+
+    auto res_bytes = buffer.read_from(test.arg);
+    std::string result { res_bytes.begin(), res_bytes.end() };
+    
+    if (result != test.expecting) {
+        std::cout 
+        << "buffer_find_table_test failed: reading from '" << test.arg
+        << "', expecting '"<< test.expecting << "' len " << test.expecting.size()
+        << ", got '" << result << "' len " << result.size()
+        << std::endl;
+    }
+
+    BOOST_ASSERT( result == test.expecting );
+}
+
+BOOST_AUTO_TEST_CASE( buffer_read_from_table_test ) {
+    for (auto &test : read_from_tests) do_read_from_test(test);
 }

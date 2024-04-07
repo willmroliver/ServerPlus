@@ -43,11 +43,32 @@ SecureSocket::SecureSocket(SecureSocket&& sock):
 
 SecureSocket& SecureSocket::operator=(SecureSocket& sock) {
     Socket::operator=(sock);
+
+    aes = crpt::Crypt("AES-256-CBC");
+    dh = crpt::Exchange("ffdhe2048");
+    shared_secret = sock.shared_secret;
+    key = sock.key;
+    iv = sock.iv;
+    is_secure = sock.is_secure;
+
     return *this;
 }
 
 SecureSocket& SecureSocket::operator=(SecureSocket&& sock) {
     Socket::operator=(std::move(sock));
+
+    aes = crpt::Crypt("AES-256-CBC");
+    dh = crpt::Exchange("ffdhe2048");
+    shared_secret = sock.shared_secret;
+    key = sock.key;
+    iv = sock.iv;
+    is_secure = sock.is_secure;
+
+    sock.shared_secret = {};
+    sock.key = {};
+    sock.iv = {};
+    sock.is_secure = false;
+
     return *this;
 }
 
@@ -127,6 +148,8 @@ std::pair<int, bool> SecureSocket::try_recv() {
         return { -2, false };
     }
 
+    int offset = buf.size();
+    
     auto sock_recv = Socket::try_recv();
 
     if (!sock_recv.second) {
@@ -138,7 +161,7 @@ std::pair<int, bool> SecureSocket::try_recv() {
         return sock_recv;
     }
 
-    auto cipher_text = Socket::flush_buffer();
+    auto cipher_text = buf.read_from(offset);
     auto [plain_text, success] = aes.decrypt(cipher_text, key, iv);
 
     if (!(success && buf.write(plain_text))) {

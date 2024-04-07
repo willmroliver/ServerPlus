@@ -1,6 +1,3 @@
-#include <iostream>
-#include <thread>
-
 #include "context.hpp"
 #include "server.hpp"
 #include "logger.hpp"
@@ -21,8 +18,9 @@ event_callback_fn Context::receive_callback = [] (evutil_socket_t fd, short flag
 
     ctx->server->allocate_work([&ctx] () {
         ctx->read_sock();
-        ctx->event->add();
     });
+
+    ctx->event->add();
 };
 
 event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short flags, void* arg) {
@@ -58,7 +56,7 @@ void Context::handle_request() {
     if (server == nullptr || !server->exec_endpoint(header.path(), this)) {
         do_error(ERR_CONTEXT_HANDLE_REQUEST_FAILED);
     } else {
-        // @todo exec_endpoint should return a promise, on which we block until resolved!
+        /** @todo exec_endpoint should return a promise, on which we block until resolved! */
         reset();
     }
 }
@@ -102,7 +100,10 @@ void Context::read_sock() {
             do_error(ERR_CONTEXT_HANDLE_READ_FAILED);
             return;
         case 0:
-            Logger::get().log("server: context: connection closed");
+            if (errno != EAGAIN) {
+                
+            }
+            /** @todo implement some tidy-up, including removing context from Server::ctx_pool */
             return;
         default:
             break;
@@ -158,6 +159,15 @@ void Context::read_sock() {
         sock.clear_buffer();
         reset();
     }
+}
+
+bool Context::send_message(const std::string& data) {
+    if (!sock.try_send(data)) {
+        do_error(ERR_CONTEXT_SEND_MESSAGE_FAILED);
+        return false;
+    }
+
+    return true;
 }
 
 void Context::do_error(int err_code) {

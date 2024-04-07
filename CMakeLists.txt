@@ -11,7 +11,6 @@ set(Boost_USE_STATIC_LIBS ON)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
-    set(ENV{LLVM_PROFILE_FILE} "default.profraw")
 endif()
 
 find_package(Boost 1.82.0 COMPONENTS unit_test_framework REQUIRED)

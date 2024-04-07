@@ -48,6 +48,7 @@ constexpr int ERR_CONTEXT_HANDLE_REQUEST_FAILED = 13002;
 constexpr int ERR_CONTEXT_HANDLE_READ_FAILED = 13003;
 constexpr int ERR_CONTEXT_DO_ERROR_FAILED = 13004;
 constexpr int ERR_CONTEXT_PING_FAILED = 13005;
+constexpr int ERR_CONTEXT_SEND_MESSAGE_FAILED = 13006;
 
 // Server
 constexpr int ERR_SERVER_ACCEPT_CONN_FAILED = 13003;
@@ -83,6 +84,7 @@ static std::unordered_map<int, std::string> error_messages = {
     { ERR_CONTEXT_HANDLE_READ_FAILED, "Context: failed to read incoming data" },
     { ERR_CONTEXT_DO_ERROR_FAILED, "Context: failed to send error response to peer" },
     { ERR_CONTEXT_PING_FAILED, "Context: failed to send ping response to peer" },
+    { ERR_CONTEXT_SEND_MESSAGE_FAILED, "Context: failed to send message to peer" },
 
     // Server
     { ERR_SERVER_ACCEPT_CONN_FAILED, "Server: failed to accept incoming connection" },
