@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_CASE( test_secure_socket_handshake_init_fails ) {
 struct SecureSockFixture {
     serv::Socket listener;
     serv::SecureSocket sender;
-    test::Client<1024> client;
+    test::Client client;
 
     SecureSockFixture(): client { "8000" }, sender {} {
         clear_logger();
@@ -116,6 +116,5 @@ BOOST_FIXTURE_TEST_CASE( test_secure_socket_data_sent_matches_data_recv, SecureS
     BOOST_ASSERT( len > -1 );
 
     auto recvd = sender.flush_buffer();
-
     BOOST_ASSERT( std::string(recvd.begin(), recvd.end()) == data);
 }

@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <vector>
+#include <cerrno>
 #include "buffer.hpp"
 
 using namespace libev;

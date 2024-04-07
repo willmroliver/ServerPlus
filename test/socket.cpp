@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE( socket_try_listen_table_test ) {
 
 struct AcceptFixture {
     serv::Socket listener;
-    test::Client<1024> client;
+    test::Client client;
 
     AcceptFixture(): client { "8000" } {
         clear_logger();
@@ -65,7 +65,7 @@ BOOST_FIXTURE_TEST_CASE( socket_try_accept_test, AcceptFixture ) {
 struct SendFixture {
     serv::Socket listener;
     serv::Socket sender;
-    test::Client<1024> client;
+    test::Client client;
 
     SendFixture(): client { "8000" } {
         clear_logger();
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE( socket_try_send_fails_test ) {
     ASSERT_ERR_LOGGED( ERR_SOCKET_INVALID_SEND_ATTEMPT );
 
     serv::Socket listener;
-    test::Client<1024> client { "8000" };
+    test::Client client { "8000" };
     listener.try_listen("8000");
     client.try_connect();
     listener.try_accept(sock);

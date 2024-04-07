@@ -1,16 +1,3 @@
-#include <string>
-#include <iostream>
-#include <utility>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <event.hpp>
-#include <event-base.hpp>
-#include <utility>
-#include <iostream>
-#include <thread>
-
 #include "server.hpp"
 #include "context.hpp"
 #include "logger.hpp"
@@ -42,7 +29,7 @@ Server::Server(std::string port, unsigned thread_count):
 {}
 
 void Server::set_endpoint(std::string path, HandlerFunc cb) {
-    api[path] = std::make_unique<Handler>(this, path, cb);
+    api.emplace(path, std::make_unique<Handler>(this, path, cb));
 }
 
 bool Server::exec_endpoint(std::string path, Context* c) {

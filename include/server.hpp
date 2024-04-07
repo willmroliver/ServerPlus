@@ -5,7 +5,6 @@
 #include <event.hpp>
 #include <map>
 #include <string>
-#include <memory>
 #include "socket.hpp"
 #include "thread-pool.hpp"
 #include "handler.hpp"

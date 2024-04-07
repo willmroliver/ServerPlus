@@ -12,7 +12,8 @@
 
 namespace test {
 
-template <unsigned BUF_SIZE>
+const unsigned BUF_SIZE = 1024;
+
 class Client {
     private:
         std::string port;
