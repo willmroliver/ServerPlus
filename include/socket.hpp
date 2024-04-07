@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <vector>
+#include <cerrno>
 #include "buffer.hpp"
 
 using namespace libev;
@@ -18,7 +19,7 @@ namespace serv {
  * [This should probably have been encapsulated in its own wrapper library, but it works, and there's not much memory-management going on]
  */
 class Socket {
-    private: 
+    protected:
         evutil_socket_t fd;
         bool listening;
         sockaddr_storage addr;
@@ -27,10 +28,10 @@ class Socket {
     
     public:
         Socket();
-        Socket(Socket& sock) = default;
-        Socket(Socket&& sock) = default;
-        Socket& operator=(Socket& sock) = default;
-        Socket& operator=(Socket&& sock) = default;
+        Socket(Socket& sock);
+        Socket(Socket&& sock);
+        Socket& operator=(Socket& sock);
+        Socket& operator=(Socket&& sock);
         ~Socket();
 
         inline const evutil_socket_t get_fd() const {
@@ -135,7 +136,7 @@ class Socket {
         /**
          * @brief Empties and returns the entire content of the buffer.
          * 
-         * @return std::string 
+         * @return std::vector<char> 
          */
         std::vector<char> flush_buffer();
 

@@ -4,13 +4,25 @@ package serv.proto;
 
 /* This header should precede all usual requests from a peer to the host */
 message Header {
+    enum Type {
+        TYPE_UNSPEC = 0;
+        TYPE_PING = 1;
+        TYPE_HANDSHAKE = 2;
+        TYPE_REQUEST = 3;
+    }
 
-    /* The name of the proto message following, i.e. 'LoginRequest', 'PeerHandshake' */
-    string type = 1;
+    /* The type of incoming message */
+    Type type = 1;
 
     /* The size of the message following, in bytes */
     int32 size = 2;
 
     /* The milliseconds since epoch at which the header was sent */
     optional uint64 timestamp = 3;
+
+    /* A hexadecimal digest of the header and following message. Required for secure channels */
+    optional string digest = 4;
+
+    /* Specifies the corresponding API endpoint to pass request data to */
+    optional string path = 5;
 }

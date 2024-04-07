@@ -3,15 +3,20 @@
 
 #include <iostream>
 #include <vector>
+#include <thread>
 #include <boost/test/unit_test.hpp>
 #include "logger.hpp"
 
-/**
- * @brief This function should only perform generic initialization/clean-up tasks, 
- * so that any test may utilize it if needed.
- */
 inline void clear_logger() {
     serv::Logger::get().clear_buf();
+}
+
+/**
+ * @brief A little time buffer is often useful to ensure OS network stack has resolved in time for non-blocking sock operations to be called.
+ */
+inline void tiny_sleep() {
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(10ns);
 }
 
 inline void ASSERT_ERR_LOGGED(int err_code) {

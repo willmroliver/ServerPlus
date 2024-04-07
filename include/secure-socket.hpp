@@ -3,39 +3,26 @@
 
 #include <crypt/crypt.hpp>
 #include <crypt/exchange.hpp>
-#include "buffer.hpp"
+#include "socket.hpp"
 
 namespace serv {
 
-class Socket;
-
-class SecureSocket {
+class SecureSocket : public Socket {
     private:
-        std::shared_ptr<Socket> sock;
-        Buffer<1024> buf;
-
         crpt::Crypt aes { "AES-256-CBC" };
         crpt::Exchange dh { "ffdhe2048" };
-
         std::vector<char> shared_secret;
         std::vector<char> key;
         std::vector<char> iv;
-
-        bool is_secure;
+        bool is_secure = false;
     
     public:
-        SecureSocket(std::shared_ptr<Socket>& sock);
-        SecureSocket(std::shared_ptr<Socket>&& sock);
-        SecureSocket(SecureSocket& sock) = default;
-        SecureSocket(SecureSocket&& sock) = default;
-        ~SecureSocket() = default;
-        SecureSocket& operator=(SecureSocket& sock) = default;
-        SecureSocket& operator=(SecureSocket&& sock) = default;
+        SecureSocket();
+        SecureSocket(SecureSocket& sock);
+        SecureSocket(SecureSocket&& sock);
+        SecureSocket& operator=(SecureSocket& sock);
+        SecureSocket& operator=(SecureSocket&& sock);
 
-        inline const Socket* const get_sock() const {
-            return sock.get();
-        }
-        
         /**
          * @brief Initialize a handshake from the host, passing the public key & IV to the peer.
          * 
@@ -79,6 +66,13 @@ class SecureSocket {
          * @return std::string The message, or an empty string if a null-terminator is not found.
          */
         std::string read_buffer();
+
+        /**
+         * @brief Empties and returns the entire content of the buffer.
+         * 
+         * @return std::vector<char> 
+         */
+        std::vector<char> flush_buffer();
 
         /**
          * @brief Clears the socket buffer memory and resets internal state.

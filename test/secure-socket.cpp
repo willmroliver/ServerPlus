@@ -13,7 +13,7 @@ BOOST_AUTO_TEST_CASE( test_secure_socket_handshake_init_fails ) {
     clear_logger();
 
     auto sock = std::make_shared<serv::Socket>();
-    serv::SecureSocket secure_sock { sock };
+    serv::SecureSocket secure_sock {};
 
     BOOST_ASSERT( !secure_sock.handshake_init() );
     ASSERT_ERR_LOGGED( ERR_SECURE_SOCKET_HANDSHAKE_INIT_FAILED );
@@ -22,16 +22,13 @@ BOOST_AUTO_TEST_CASE( test_secure_socket_handshake_init_fails ) {
 struct SecureSockFixture {
     serv::Socket listener;
     serv::SecureSocket sender;
-    test::Client<1024> client;
+    test::Client client;
 
-    SecureSockFixture(): client { "8000" }, sender { std::make_shared<serv::Socket>() } {
+    SecureSockFixture(): client { "8000" }, sender {} {
         clear_logger();
         listener.try_listen("8000", AF_UNSPEC, SOCK_STREAM, AI_PASSIVE);
         client.try_connect();
-
-        auto sock = std::make_shared<serv::Socket>();
-        listener.try_accept(*sock);
-        sender = serv::SecureSocket(sock);
+        listener.try_accept(sender);
     }
 
     ~SecureSockFixture() {
@@ -44,15 +41,9 @@ BOOST_FIXTURE_TEST_CASE( test_secure_socket_handshake_init, SecureSockFixture ) 
     BOOST_ASSERT( sender.handshake_init() );
 }
 
-void tiny_sleep() {
-    // A little time buffer is necessary to ensure sender has received client handshake response.
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for(50ns);
-}
-
 BOOST_FIXTURE_TEST_CASE( test_secure_socket_handshake_final, SecureSockFixture ) {
     sender.handshake_init();
-    client.try_handshake();
+    client.handshake_init();
 
     tiny_sleep();
     BOOST_ASSERT( sender.handshake_final() );
@@ -99,12 +90,31 @@ BOOST_AUTO_TEST_CASE( test_secure_socket_blocks_send_and_recv ) {
     serv::Socket listener;
     listener.try_listen("8000");
 
-    auto sender = std::make_shared<serv::Socket>();
-    listener.try_accept(*sender);
-
-    serv::SecureSocket sock { sender };
+    serv::SecureSocket sender;
+    listener.try_accept(sender);
     std::pair<int, bool> exp { -2, false };
 
-    BOOST_ASSERT( sock.try_recv() == exp );
-    BOOST_ASSERT( !sock.try_send("0123456789") );
+    BOOST_ASSERT( sender.try_recv() == exp );
+    BOOST_ASSERT( !sender.try_send("0123456789") );
+}
+
+BOOST_FIXTURE_TEST_CASE( test_secure_socket_data_sent_matches_data_recv, SecureSockFixture ) {
+    sender.handshake_init();
+    client.handshake_init();
+
+    tiny_sleep();
+    sender.handshake_final();
+    client.handshake_final();
+    
+    auto data = "0123456789";
+
+    sender.clear_buffer();
+    client.try_send(data);
+
+    tiny_sleep();
+    auto [len, full] = sender.try_recv();
+    BOOST_ASSERT( len > -1 );
+
+    auto recvd = sender.flush_buffer();
+    BOOST_ASSERT( std::string(recvd.begin(), recvd.end()) == data);
 }

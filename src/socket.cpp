@@ -16,8 +16,57 @@ Socket::Socket():
     std::memset(&addr, 0, addr_len);
 }
 
+Socket::Socket(Socket& sock): 
+    fd { sock.fd },
+    listening { sock.listening },
+    addr { sock.addr },
+    addr_len { sock.addr_len },
+    buf { sock.buf }
+{}
+
+Socket::Socket(Socket&& sock): 
+    fd { sock.fd },
+    listening { sock.listening },
+    addr { sock.addr },
+    addr_len { sock.addr_len },
+    buf { sock.buf }
+{
+    sock.fd = 0;
+    sock.listening = false;
+    std::memset(&sock.addr, 0, sock.addr_len);
+    sock.addr_len = 0;
+    sock.buf.clear();
+}
+
+Socket& Socket::operator=(Socket& sock) {
+    fd = sock.fd;
+    listening = sock.listening;
+    addr = sock.addr;
+    addr_len = sock.addr_len;
+    buf = sock.buf;
+    return *this;
+}
+
+Socket& Socket::operator=(Socket&& sock) {
+    fd = sock.fd;
+    listening = sock.listening;
+    addr = sock.addr;
+    addr_len = sock.addr_len;
+    buf = sock.buf;
+
+    sock.fd = 0;
+    sock.listening = false;
+    std::memset(&sock.addr, 0, sock.addr_len);
+    sock.addr_len = 0;
+    sock.buf.clear();
+    
+    return *this;
+}
+
 Socket::~Socket() {
-    close(fd);
+    if (fd > 2) {
+        close(fd);
+    }
 }
 
 bool Socket::try_listen(std::string port, int family, int socktype, int flags) { 
@@ -153,20 +202,22 @@ std::pair<int, bool> Socket::try_recv() {
         auto buffer = socket->buf;
 
         auto nbytes = recvfrom(socket->get_fd(), dest, n, 0, nullptr, 0);
-
-        if (nbytes <= 0) {
-            if (nbytes == -1) {
-                Logger::get().error("server: socket: recvfrom: " + std::string(strerror(errno)));
-            }
-            else {
-                Logger::get().log("context: peer closed connection on sock " + std::to_string(socket->get_fd()));
-            }
-            
-            socket->close_fd();
-            return 0;
+        
+        if (nbytes > 0) {
+            return static_cast<int>(nbytes);
         }
 
-        return static_cast<int>(nbytes);
+        if (nbytes == -1) {
+            if (errno != EAGAIN) {
+                Logger::get().error("server: socket: recvfrom: " + std::string(strerror(errno)));
+            }
+        }
+        else {
+            Logger::get().log("context: peer closed connection on sock " + std::to_string(socket->get_fd()));
+            socket->close_fd();
+        }
+
+        return 0;
     }, this);
 }
 
