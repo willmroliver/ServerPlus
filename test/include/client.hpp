@@ -31,6 +31,23 @@ class Client {
             if (!fd) return;
             if (close(fd) == -1 && errno != EBADF) perror("close");
         };
+        Client& operator=(Client&& client) {
+            port = client.port;
+            fd = client.fd;
+            key = client.key;
+            iv = client.iv;
+            aes = crpt::Crypt { "AES-256-CBC" };
+            dh = crpt::Exchange { "ffdhe2048" };
+            secure = client.secure;
+
+            client.port = "";
+            client.fd = 0;
+            client.key.clear();
+            client.iv.clear();
+            client.secure = false;
+
+            return *this;
+        }
 
         bool try_connect() {
             addrinfo hints, *ai, *p;

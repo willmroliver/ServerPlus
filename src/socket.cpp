@@ -187,13 +187,9 @@ bool Socket::close_fd() {
 }
 
 std::pair<int, bool> Socket::try_recv(int (*write_cb) (char* dest, unsigned n, void* data), void* arg) {
-    auto res = buf.write(write_cb, buf.bytes_free(), arg);
+    std::lock_guard lock { recv_mux };
 
-    if (!res.second) {
-        Logger::get().error(ERR_SOCKET_RECV_FAILED);
-    }
-    
-    return res;
+    return buf.write(write_cb, buf.bytes_free(), arg);
 }
 
 std::pair<int, bool> Socket::try_recv() {
@@ -208,7 +204,7 @@ std::pair<int, bool> Socket::try_recv() {
         }
 
         if (nbytes == -1) {
-            if (errno != EAGAIN) {
+            if (!(errno & (EAGAIN|EWOULDBLOCK))) {
                 Logger::get().error("server: socket: recvfrom: " + std::string(strerror(errno)));
             }
         }
@@ -240,15 +236,19 @@ bool Socket::try_send(const std::vector<char>& data, ssize_t send(int, const voi
 
     auto bytes_sent = 0;
     auto total = 0;
+    
+    {
+        std::lock_guard lock { send_mux };
 
-    while (total < len) {
-        if ((bytes_sent = send(fd, bytes + total, len - total, 0)) == -1) {
-            // send error
-            Logger::get().error(ERR_SOCKET_SEND_FAILED);
-            return false;
+        while (total < len) {
+            if ((bytes_sent = send(fd, bytes + total, len - total, 0)) == -1) {
+                // send error
+                Logger::get().error(ERR_SOCKET_SEND_FAILED);
+                return false;
+            }
+
+            total += bytes_sent;
         }
-
-        total += bytes_sent;
     }
 
     return true;
@@ -256,6 +256,7 @@ bool Socket::try_send(const std::vector<char>& data, ssize_t send(int, const voi
 
 std::vector<char> Socket::read_buffer(char delim) {
     if (buf.contains(delim)) {
+        std::lock_guard lock { buf_mux };
         auto [res, found] = buf.read_to(delim);
         return res;
     }
@@ -269,9 +270,11 @@ std::string Socket::read_buffer() {
 }
 
 std::vector<char> Socket::flush_buffer() {
+    std::lock_guard lock { buf_mux };
     return buf.read();
 }
 
 void Socket::clear_buffer() {
+    std::lock_guard lock { buf_mux };
     buf.clear();
 }
