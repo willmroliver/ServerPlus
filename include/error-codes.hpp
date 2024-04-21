@@ -53,6 +53,10 @@ constexpr int ERR_CONTEXT_SEND_MESSAGE_FAILED = 13006;
 // Server
 constexpr int ERR_SERVER_ACCEPT_CONN_FAILED = 13003;
 
+// ThreadPool
+constexpr int ERR_THREAD_POOL_THREAD_LOOP_ERROR = 14001;
+constexpr int ERR_THREAD_POOL_DESTROY_POOL_ERROR = 14002;
+
 static std::unordered_map<int, std::string> error_messages = {
     // General
     { ERR_UNKNOWN, "Unknown error occurred." },
@@ -88,6 +92,10 @@ static std::unordered_map<int, std::string> error_messages = {
 
     // Server
     { ERR_SERVER_ACCEPT_CONN_FAILED, "Server: failed to accept incoming connection" },
+
+    // ThreadPool
+    { ERR_THREAD_POOL_THREAD_LOOP_ERROR, "ThreadPool: exception occurred in task loop" },
+    { ERR_THREAD_POOL_DESTROY_POOL_ERROR, "ThreadPool: exception occurred destroying pool" },
 };
 
 #endif

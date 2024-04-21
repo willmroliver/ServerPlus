@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <vector>
 #include <cerrno>
+#include <mutex>
 #include "buffer.hpp"
 
 using namespace libev;
@@ -25,7 +26,10 @@ class Socket {
         sockaddr_storage addr;
         socklen_t addr_len;
         Buffer<1024> buf;
-    
+        std::mutex recv_mux;
+        std::mutex send_mux;
+        std::mutex buf_mux;
+
     public:
         Socket();
         Socket(Socket& sock);
@@ -86,7 +90,7 @@ class Socket {
          * 
          * @param write_cb The callback to pass to the buffer's write function. See Buffer<T>::write()
          * @param arg The arg to pass in for access within the callback
-         * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the socket's buffer is full.
+         * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the buffer has space remaining.
          */
         std::pair<int, bool> try_recv(int (*write_cb) (char* dest, unsigned n, void* data), void* arg);
 
@@ -94,7 +98,7 @@ class Socket {
          * @brief Attempts to read available data from the socket stream into a buffer. Uses a default zero-copy callback to write to the buffer
          * See man recvfrom
          * 
-         * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the socket's buffer is full.
+         * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the buffer has space remaining.
          */
         std::pair<int, bool> try_recv();
         

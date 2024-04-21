@@ -40,7 +40,7 @@ class SecureSocket : public Socket {
         /**
          * @brief If secure, retrieves and decrypts sock data. See Socket::try_rev()
          * 
-         * @return std::pair<int, bool> The number of bytes read (-2 indicates socket is not secure, -1 indicates error) and whether the buffer is full
+         * @return std::pair<int, bool> The number of bytes read (-2 indicates socket is not secure, -1 indicates error) and whether the buffer has space remaining.
          */
         std::pair<int, bool> try_recv();
 
@@ -51,33 +51,6 @@ class SecureSocket : public Socket {
          * @return bool The success or failure of the attempt to ancrypt and send.
          */
         bool try_send(std::string data);
-
-        /**
-         * @brief Retrieves data from the buffer (FIFO) up to the first instance of delim.
-         * 
-         * @param delim A character (delimiting between blocks of data).
-         * @return std::string The message, or an empty string if delim is not found.
-         */
-        std::vector<char> read_buffer(char delim);
-
-        /**
-         * @brief Retrieves data from the buffer (FIFO) up to the first null-terminator.
-         * 
-         * @return std::string The message, or an empty string if a null-terminator is not found.
-         */
-        std::string read_buffer();
-
-        /**
-         * @brief Empties and returns the entire content of the buffer.
-         * 
-         * @return std::vector<char> 
-         */
-        std::vector<char> flush_buffer();
-
-        /**
-         * @brief Clears the socket buffer memory and resets internal state.
-         */
-        void clear_buffer();
 };
 
 }

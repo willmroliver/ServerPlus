@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package serv.proto;
+
+/* A simple request */
+message Request { 
+    string data = 1;
+}

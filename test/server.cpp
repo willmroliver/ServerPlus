@@ -1,4 +1,5 @@
 #include <thread>
+#include <future>
 #include <iostream>
 #include <boost/test/unit_test.hpp>
 #include <crypt/exchange.hpp>
@@ -110,4 +111,40 @@ BOOST_FIXTURE_TEST_CASE( handler_integration_test, ServerFixture ) {
 
     client.try_send(header.SerializeAsString());
     BOOST_ASSERT( client.try_recv() == MESSAGE_2 );
+}
+
+BOOST_FIXTURE_TEST_CASE( server_basic_multiple_connection_test, ServerFixture ) {
+    const std::string PATH = "/test";
+
+    s.set_endpoint(PATH, [] (serv::Server* srv, serv::Context* ctx) {
+        std::string data = "1";
+        ctx->send_message(data);
+    });
+
+    constexpr int NCLIENTS = 100;
+    std::vector<test::Client> clients(NCLIENTS);
+
+    for (int i = 0; i < NCLIENTS; ++i) {
+        clients[i] = test::Client("8000");
+        clients[i].try_connect();
+        clients[i].handshake_init();
+        clients[i].handshake_final();
+
+        using namespace std::chrono_literals;
+        std::this_thread::sleep_for(100ns);
+    }
+
+    for (int i = 0; i < NCLIENTS; ++i) {
+        using namespace serv::proto;
+        Header header;
+        header.set_type(Header_Type::Header_Type_TYPE_REQUEST);
+        header.set_size(0);
+        header.set_path(PATH);
+
+        clients[i].try_send(header.SerializeAsString());
+    }
+
+    for (int i = 0; i < NCLIENTS; ++i) {
+        BOOST_ASSERT( clients[i].try_recv() == "1" );
+    }
 }
