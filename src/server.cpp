@@ -14,18 +14,11 @@ event_callback_fn Server::accept_callback = [] (evutil_socket_t listener, short 
 };
 
 Server::Server():
-    port { "3993" },
-    thread_pool { 8 }
+    port { "3993" }
 {}
 
 Server::Server(std::string port):
-    port { port },
-    thread_pool { 8 }
-{}
-
-Server::Server(std::string port, unsigned thread_count):
-    port { port },
-    thread_pool { thread_count }
+    port { port }
 {}
 
 void Server::set_endpoint(std::string path, HandlerFunc cb) {
@@ -39,6 +32,7 @@ bool Server::exec_endpoint(std::string path, Context* c) {
     }
 
     api[path]->exec(c);
+
     return true;
 }
 
@@ -68,16 +62,20 @@ void Server::accept_connection() {
         Logger::get().error("server: accept_connection: failed on sock " + std::to_string(sock.get_fd()));
         return;
     }
-
+    
     ctx_pool.emplace(sock.get_fd(), std::make_shared<Context>(this, std::move(sock)));
 }
 
+void Server::close_connection(evutil_socket_t fd) {
+    auto it = ctx_pool.find(fd);
+    if (it != ctx_pool.end()) {
+        ctx_pool.erase(it);
+    }
+    std::cout << std::to_string(ctx_pool.size()) << std::endl;
+}
+
 void Server::stop() {
-    thread_pool.stop();
-
-    if (base.loopexit()) status = 0;
-    else status = -1;
-
+    base.loopexit();
     Logger::get().log("server: stopped with status " + std::to_string(status));
 }
 

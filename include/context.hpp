@@ -22,14 +22,15 @@ class Server;
 class Context {
     private:
         Server* server;
-        SecureSocket sock;
-        std::unique_ptr<Event> event;
+        std::shared_ptr<SecureSocket> sock;
+        std::shared_ptr<Event> event;
         std::string header_data;
         std::string request_data;
         proto::Header header;
         static event_callback_fn receive_callback;
         static event_callback_fn handshake_callback;
         bool header_parsed = false;
+        int fd = 0;
 
         /**
          * @brief Adds a new event to the server event base for this socket, passing itself as the arg.
