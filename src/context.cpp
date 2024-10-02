@@ -17,11 +17,12 @@ event_callback_fn Context::receive_callback = [] (evutil_socket_t fd, short flag
         return;
     }
 
-    auto cpy = *ctx;
+    ctx->join();
 
-    ctx->server->allocate_work<std::function<void(Context)>, Context>([] (Context c) mutable {
-        c.read_sock();
-    }, std::move(cpy));
+    auto cpy = *ctx;
+    cpy.thread = std::make_shared<std::thread>([&cpy] () {
+        cpy.read_sock();
+    });
 };
 
 event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short flags, void* arg) {
@@ -90,6 +91,10 @@ Context::Context(Server* server, SecureSocket&& s):
         server->get_base()->dump_status();
         return;
     }
+}
+
+Context::~Context() {
+    join();
 }
 
 void Context::read_sock() {
@@ -180,5 +185,11 @@ void Context::do_error(int err_code) {
 
     if (!sock->try_send(err.SerializeAsString())) {
         Logger::get().error(ERR_CONTEXT_DO_ERROR_FAILED);
+    }
+}
+
+void Context::join() noexcept {
+    if (thread != nullptr && thread->joinable()) {
+        thread->join();
     }
 }
