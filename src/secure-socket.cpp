@@ -150,12 +150,7 @@ std::pair<int, bool> SecureSocket::try_recv() {
 
     int offset = buf.size();
     
-    auto sock_recv = Socket::try_recv();
-
-    if (!sock_recv.second) {
-        Logger::get().error(ERR_SECURE_SOCKET_RECV_FAILED);
-        return sock_recv;
-    }
+    const auto sock_recv = Socket::try_recv();
 
     if (sock_recv.first < 1) {
         return sock_recv;
@@ -169,7 +164,7 @@ std::pair<int, bool> SecureSocket::try_recv() {
         return { -1, sock_recv.second };
     }
     
-    return { plain_text.size(), !buf.bytes_free() };
+    return { plain_text.size(), sock_recv.second };
 }
 
 bool SecureSocket::try_send(std::string data) {
@@ -191,27 +186,4 @@ bool SecureSocket::try_send(std::string data) {
     }
 
     return true;
-}
-
-std::vector<char> SecureSocket::read_buffer(char delim) {
-    if (buf.contains(delim)) {
-        auto [res, found] = buf.read_to(delim);
-        return res;
-    }
-
-    return {};
-}
-
-std::string SecureSocket::read_buffer()  {
-    auto data = read_buffer(0);
-    return { data.begin(), data.end() };
-}
-
-std::vector<char> SecureSocket::flush_buffer() {
-    return buf.read();
-}
-
-void SecureSocket::clear_buffer() {
-    Socket::clear_buffer();
-    buf.clear();
 }

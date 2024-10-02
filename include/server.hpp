@@ -5,6 +5,7 @@
 #include <event.hpp>
 #include <map>
 #include <string>
+#include <memory>
 #include "socket.hpp"
 #include "thread-pool.hpp"
 #include "handler.hpp"
@@ -22,19 +23,17 @@ class Server {
         std::string port;
         Socket listen_sock;
         EventBase base;
+        std::unordered_map<std::string, std::unique_ptr<Handler>> api;
+        static event_callback_fn accept_callback;
         ThreadPool thread_pool;
         std::unordered_map<evutil_socket_t, std::shared_ptr<Context>> ctx_pool;
-        std::unordered_map<std::string, std::unique_ptr<Handler>> api;
-
-        static event_callback_fn accept_callback;
 
     public:
         Server();
         Server(std::string port);
-        Server(std::string port, unsigned thread_count);
         Server(Server &s) = delete;
         Server(Server &&s) = delete;
-        ~Server() = default;
+        ~Server();
 
         /**
          * @brief Get the error status of the server. 0 indicates no error.
@@ -73,6 +72,12 @@ class Server {
          * @brief Called by accept_callback; attempts to accept an incoming connection attempt.
          */
         void accept_connection();
+
+        /**
+         * @brief Removes a context from the server whenever the peer closes the socket connection.
+         * 
+         */
+        void close_connection(evutil_socket_t fd);
 
         /**
          * @brief Gracefully terminates the event base loop.

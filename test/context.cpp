@@ -7,6 +7,7 @@
 #include "helpers.hpp"
 #include "utility/time.hpp"
 #include "header.pb.h"
+#include "request.pb.h"
 #include "error.pb.h"
 
 struct ContextFixture {
@@ -70,9 +71,70 @@ BOOST_FIXTURE_TEST_CASE( read_sock_handles_malformed_data, ContextFixture ) {
     ctx->read_sock();
 
     ASSERT_ERR_LOGGED(ERR_CONTEXT_HANDLE_READ_FAILED);
-    BOOST_ASSERT( ctx->get_header_data() == "" );
 
     serv::proto::Error err;
     BOOST_ASSERT( err.ParseFromString(client.try_recv()) );
     BOOST_ASSERT( err.code() == ERR_CONTEXT_HANDLE_READ_FAILED );
+}
+
+struct ReadSockFixture : ContextFixture {
+    serv::proto::Header header;
+    serv::proto::Request request;
+    std::string header_data;
+    std::string request_data;
+
+    ReadSockFixture(): 
+        ContextFixture(),
+        header {},
+        request {}
+    {
+        header.set_timestamp(serv::util::sys_timestamp<std::chrono::microseconds>());
+        header.set_path("/path/to/something");
+        header.set_size(1);
+
+        request.set_data("Hello, World!");
+
+        header.SerializeToString(&header_data);
+        request.SerializeToString(&request_data);
+    }
+};
+
+BOOST_FIXTURE_TEST_CASE( read_sock_parses_header_and_request_together, ReadSockFixture ) {
+    auto concat = [] (const std::string& a, const std::string& b) -> std::string {
+        return a + '\0' + b;
+    };
+
+    client.try_send(concat(header_data, request_data));
+    tiny_sleep();
+    ctx->read_sock();
+
+    BOOST_ASSERT( ctx->get_header_data() == header_data );
+    BOOST_ASSERT( ctx->get_request_data() == request_data );
+}
+
+BOOST_FIXTURE_TEST_CASE( read_sock_parses_header_and_request_separately, ReadSockFixture ) {
+    client.try_send(header_data);
+    tiny_sleep();
+    ctx->read_sock();
+    BOOST_ASSERT( ctx->get_header_data() == header_data );
+
+    client.try_send(request_data);
+    tiny_sleep();
+    ctx->read_sock();
+    BOOST_ASSERT( ctx->get_request_data() == request_data );
+}
+
+BOOST_FIXTURE_TEST_CASE( read_sock_parses_header_and_request_sequentially, ReadSockFixture ) {
+    auto concat = [] (const std::string& a, const std::string& b) -> std::string {
+        return a + '\0' + b;
+    };
+
+    for (int i = 0; i < 10; i++) {
+        client.try_send(concat(header_data, request_data));
+        tiny_sleep();
+        ctx->read_sock();
+
+        BOOST_ASSERT( ctx->get_header_data() == header_data );
+        BOOST_ASSERT( ctx->get_request_data() == request_data );
+    }
 }

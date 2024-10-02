@@ -2,7 +2,7 @@
 
 ## About
 
-A TCP server solution & custom protocol for creating 'lobbies'. Provides E2E channel encryption with OpenSSL and extensibility via Protobuf classes.
+A lightweight, custom TCP protocol implementation. Provides E2E channel encryption with OpenSSL and extensibility via an endpoint-handler API.
 
 ### Dependencies
 
@@ -11,7 +11,7 @@ A TCP server solution & custom protocol for creating 'lobbies'. Provides E2E cha
 https://github.com/willmroliver/CryptPlus
 https://www.openssl.org/docs/
 
-Provides Diffie-Hellman / symmetric encryption support via OpenSSL, with some support classes that offer high-level abstractions of basic operations. 
+Provides Diffie-Hellman / symmetric encryption support via OpenSSL, with some support classes that offer higher-level abstractions of basic operations. 
 
 #### LibeventPlus
 

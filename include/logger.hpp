@@ -21,7 +21,7 @@ class Logger {
 
         std::pair<uint64_t, std::string> new_item(const std::string& msg);
         std::pair<uint64_t, std::string> new_item(int err_code);
-        void log_item(std::ostream* stream, const std::pair<uint64_t, std::string>& item, int err_code, bool flush);
+        void log_item(std::ostream* stream, const std::pair<uint64_t, std::string>& item, int err_code, bool flush) noexcept;
         std::string format(const std::pair<uint64_t, std::string>& item, int err_code=0) const;
         void flush();
         Logger();
@@ -50,7 +50,7 @@ class Logger {
         uint64_t sys_time() const;
         const std::pair<uint64_t, std::string> log(const std::string& msg, bool flush=true);
         const std::pair<uint64_t, std::string> error(const std::string& msg, bool flush=true);
-        const std::pair<uint64_t, std::string> error(int err_code, bool flush=true);
+        const std::pair<uint64_t, std::string> error(int err_code, const std::exception* e=nullptr, bool flush=true);
         const std::pair<uint64_t, std::string> top() const;
         const std::pair<uint64_t, std::string> pop();
         std::ostream* const get_log_stream() const;

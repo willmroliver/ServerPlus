@@ -1,3 +1,4 @@
+#include <mutex>
 #include "context.hpp"
 #include "server.hpp"
 #include "logger.hpp"
@@ -16,11 +17,12 @@ event_callback_fn Context::receive_callback = [] (evutil_socket_t fd, short flag
         return;
     }
 
-    ctx->server->allocate_work([&ctx] () {
-        ctx->read_sock();
-    });
+    ctx->join();
 
-    ctx->event->add();
+    auto cpy = *ctx;
+    cpy.thread = std::make_shared<std::thread>([&cpy] () {
+        cpy.read_sock();
+    });
 };
 
 event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short flags, void* arg) {
@@ -29,7 +31,7 @@ event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short fl
         return;
     }
 
-    if (ctx->sock.handshake_final()) {
+    if (ctx->sock->handshake_final()) {
         ctx->new_read_event();
 
         if (ctx->event->add()) {
@@ -42,22 +44,23 @@ event_callback_fn Context::handshake_callback = [] (evutil_socket_t fd, short fl
     }
     else {
         Logger::get().log("server: handshake_final failed. retrying");
-        ctx->sock.handshake_init();
+        ctx->sock->handshake_init();
     }
 };
 
 void Context::new_event(short what, event_callback_fn cb) {
     if (server != nullptr) {
-        event = std::make_unique<Event>(server->get_base()->new_event(sock.get_fd(), what, cb, this));
+        event = std::make_unique<Event>(server->get_base()->new_event(sock->get_fd(), what, cb, this));
     }
 }
 
 void Context::handle_request() {
-    if (server == nullptr || !server->exec_endpoint(header.path(), this)) {
+    if (server == nullptr) {
+        return;
+    }
+
+    if (!server->exec_endpoint(header.path(), this)) {
         do_error(ERR_CONTEXT_HANDLE_REQUEST_FAILED);
-    } else {
-        /** @todo exec_endpoint should return a promise, on which we block until resolved! */
-        reset();
     }
 }
 
@@ -69,15 +72,17 @@ void Context::reset() {
 
 Context::Context(Server* server, SecureSocket&& s):
     server { server },
-    sock { std::move(s) }
-{   
+    sock { std::make_shared<SecureSocket>(std::move(s)) }
+{
+    fd = sock->get_fd();
+
     if (server == nullptr) {
         return;
     }
 
     new_handshake_event();
 
-    if (!sock.handshake_init()) {
+    if (!sock->handshake_init()) {
         Logger::get().error("server: handshake_init failed");
         return;
     }
@@ -88,60 +93,54 @@ Context::Context(Server* server, SecureSocket&& s):
     }
 }
 
+Context::~Context() {
+    join();
+}
+
 void Context::read_sock() {
-    auto [nbytes, full] = sock.try_recv();
+    auto [nbytes, can_write] = sock->try_recv();
 
     switch (nbytes) {
         case -2:
             Logger::get().log("server: context: secure-socket blocked try_recv(). attempting handshake");
-            sock.handshake_init();
+            sock->handshake_init();
             return;
         case -1:
             do_error(ERR_CONTEXT_HANDLE_READ_FAILED);
             return;
         case 0:
-            if (errno != EAGAIN) {
-                
-            }
             /** @todo implement some tidy-up, including removing context from Server::ctx_pool */
             return;
         default:
             break;
     }
-
-    if (header_parsed) {
-        request_data = sock.read_buffer();
-        
-        if (request_data.size()) {
-            handle_request();
-            return;
-        }
-
-        if (full) {
-            do_error(ERR_CONTEXT_BUFFER_FULL);
-            sock.clear_buffer();
-            reset();
-            return;
-        }
-    }
     
-    header_data = sock.read_buffer();
+    if (!header_parsed) {
+        reset();
+        
+        header_data = sock->read_buffer();
 
-    if (header_data.size()) {
+        if (!header_data.size()) {
+            if (!can_write) {
+                do_error(ERR_CONTEXT_BUFFER_FULL);
+                sock->clear_buffer();
+            }
+
+            return;
+        }
+
         if (!header.ParseFromString(header_data)) {
             do_error(ERR_CONTEXT_HANDLE_READ_FAILED);
             Logger::get().error("server: context: protobuf: ParseFromString");
-            reset();
             return;
         }
 
         if (header.type() == proto::Header_Type::Header_Type_TYPE_PING) {
-            if (!sock.try_send(header_data)) {
+            if (!sock->try_send(header_data)) {
                 do_error(ERR_CONTEXT_PING_FAILED);
                 Logger::get().error("server: context: send ping failed");
             }
-
-            reset();
+            
             return;
         }
 
@@ -151,18 +150,24 @@ void Context::read_sock() {
         }
 
         header_parsed = true;
-        return;        
     }
     
-    if (full) {
+    request_data = sock->read_buffer();
+    
+    if (request_data.size()) {
+        handle_request();
+        header_parsed = false;
+    }
+    
+    if (!can_write) {
         do_error(ERR_CONTEXT_BUFFER_FULL);
-        sock.clear_buffer();
+        sock->clear_buffer();
         reset();
     }
 }
 
 bool Context::send_message(const std::string& data) {
-    if (!sock.try_send(data)) {
+    if (!sock->try_send(data)) {
         do_error(ERR_CONTEXT_SEND_MESSAGE_FAILED);
         return false;
     }
@@ -178,7 +183,13 @@ void Context::do_error(int err_code) {
     err.set_message(msg);
     err.set_timestamp(ts);
 
-    if (!sock.try_send(err.SerializeAsString())) {
+    if (!sock->try_send(err.SerializeAsString())) {
         Logger::get().error(ERR_CONTEXT_DO_ERROR_FAILED);
+    }
+}
+
+void Context::join() noexcept {
+    if (thread != nullptr && thread->joinable()) {
+        thread->join();
     }
 }

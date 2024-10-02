@@ -8,6 +8,8 @@
 #include <future>
 #include <mutex>
 #include <condition_variable>
+#include <iostream>
+#include "logger.hpp"
 
 namespace serv {
 
@@ -19,15 +21,17 @@ class ThreadPool {
         std::vector<std::future<void>> thread_futures;
         std::vector<std::thread> pool;
         bool run;
+        unsigned n;
 
     public:
+        ThreadPool();
         ThreadPool(unsigned n);
         ThreadPool(ThreadPool& pool) = delete;
         ThreadPool(ThreadPool&& pool) = delete;
         ~ThreadPool();
 
         /**
-         * @brief Pass any generic function to the thread pool, to later be executed by a thread, passing in the args given.
+         * @brief Pass any generic function to the thread pool, to later be executed by a dedicated thread, passing in the args given.
          * 
          * @tparam F The function type
          * @tparam Args The function arguments
@@ -36,16 +40,14 @@ class ThreadPool {
          */
         template <typename F, typename... Args>
         void enqueue(F&& f, Args&& ...args) {
-            if (!run) {
-                return;
-            }
-            
             {
-                // Lock the queue and add the new function.
-                std::unique_lock lock { queue_mutex };
-                queue.emplace([f = std::forward<F>(f), args = std::make_tuple(std::forward(args)...)] () mutable { 
-                    std::apply(std::move(f), std::move(args));
-                });
+                std::lock_guard lock { queue_mutex };
+
+                if (run) {
+                    queue.emplace([f = std::forward<F>(f), args = std::make_tuple(std::forward<Args>(args)...)] () mutable { 
+                        std::apply(std::move(f), std::move(args));
+                    });
+                }
             }
 
             // Notify some waiting thread that there is available work in the queue.
@@ -53,11 +55,20 @@ class ThreadPool {
         }
 
         /**
+         * @brief Starts the thread pool.
+         */
+        void start();
+
+        /**
          * @brief Stops the thread pool. If graceful is set to true, this call blocks until all threads have finished executing.
          * 
          * @param graceful 
          */
         void stop(bool graceful = true);
+
+        inline int size() const {
+            return n;
+        }
 };
 
 }

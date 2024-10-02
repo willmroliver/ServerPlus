@@ -1,6 +1,5 @@
 #include <boost/test/unit_test.hpp>
 #include <chrono>
-#include <memory>
 #include <thread>
 #include "socket.hpp"
 #include "secure-socket.hpp"
@@ -112,7 +111,7 @@ BOOST_FIXTURE_TEST_CASE( test_secure_socket_data_sent_matches_data_recv, SecureS
     client.try_send(data);
 
     tiny_sleep();
-    auto [len, full] = sender.try_recv();
+    auto [len, can_write] = sender.try_recv();
     BOOST_ASSERT( len > -1 );
 
     auto recvd = sender.flush_buffer();
