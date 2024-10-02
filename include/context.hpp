@@ -4,6 +4,7 @@
 #include <event.hpp>
 #include <crypt/exchange.hpp>
 #include <string>
+#include <thread>
 #include <memory>
 #include "buffer.hpp"
 #include "secure-socket.hpp"
@@ -24,6 +25,7 @@ class Context {
         Server* server;
         std::shared_ptr<SecureSocket> sock;
         std::shared_ptr<Event> event;
+        std::shared_ptr<std::thread> thread;
         std::string header_data;
         std::string request_data;
         proto::Header header;
@@ -66,6 +68,7 @@ class Context {
 
     public:
         Context(Server* server, SecureSocket&& sock);
+        ~Context();
 
         /**
          * @brief Reads available data from the sock stream, then attempts to parse a header and request from the contents of the socket buffer
@@ -86,13 +89,15 @@ class Context {
          */
         void do_error(int err_code);
 
-        inline const std::string get_header_data() const {
+        inline const std::string get_header_data() const noexcept {
             return header_data;
         }
 
-        inline const std::string get_request_data() const {
+        inline const std::string get_request_data() const noexcept {
             return request_data;
         }
+
+        void join() noexcept;
 };
 
 };

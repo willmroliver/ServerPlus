@@ -21,6 +21,10 @@ Server::Server(std::string port):
     port { port }
 {}
 
+Server::~Server() {
+    stop();
+}
+
 void Server::set_endpoint(std::string path, HandlerFunc cb) {
     api.emplace(path, std::make_unique<Handler>(this, path, cb));
 }
@@ -67,14 +71,19 @@ void Server::accept_connection() {
 }
 
 void Server::close_connection(evutil_socket_t fd) {
-    auto it = ctx_pool.find(fd);
-    if (it != ctx_pool.end()) {
-        ctx_pool.erase(it);
-    }
-    std::cout << std::to_string(ctx_pool.size()) << std::endl;
+    thread_pool.enqueue([this, fd] () {
+        auto it = ctx_pool.find(fd);
+        if (it != ctx_pool.end()) {
+            ctx_pool.erase(it);
+        }
+    });
 }
 
 void Server::stop() {
+    for (const auto& [fd, ctx] : ctx_pool) {
+        ctx->join();
+    }
+    
     base.loopexit();
     Logger::get().log("server: stopped with status " + std::to_string(status));
 }
