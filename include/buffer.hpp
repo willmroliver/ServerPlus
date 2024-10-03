@@ -4,6 +4,10 @@
 #include <string>
 #include <utility>
 #include <iostream>
+#include <algorithm>
+#include <cstdint>
+#include <cassert>
+#include "logger.hpp"
 
 namespace serv {
 
@@ -349,6 +353,119 @@ using Buffer1024 = Buffer<1024>;
 
 extern template class Buffer<8192>;
 using Buffer8192 = Buffer<8192>;
+
+
+
+class CircularBuf {
+    private:
+        char* buf;
+        uint64_t begin;
+        uint64_t end;
+        uint32_t capacity;
+
+        uint32_t get_capacity(uint32_t c) const noexcept {
+            if (~c & (c/2)) {
+                Logger::get().error("buffer: constructor: capacity not power of 2, defaulting to 1024");
+                return 1024;
+            }
+
+            return c;
+        }
+
+        uint32_t mask(uint64_t i) const noexcept {
+            return static_cast<uint32_t>(i & (capacity - 1));
+        }
+
+        bool push(char b) noexcept {
+            if (full()) {
+                return false;
+            }
+
+            buf[mask(end++)] = b;
+            return true;
+        }
+
+        bool shift(char& b) noexcept {
+            if (empty()) {
+                return false;
+            }
+
+            b = buf[mask(begin++)];
+            return true;
+        }
+
+        bool full() const noexcept {
+            return capacity == size();
+        }
+
+        bool empty() const noexcept {
+            return begin == end;
+        }
+
+        uint64_t size() const noexcept {
+            return end - begin;
+        }
+    public:
+        CircularBuf(uint32_t capacity=1024): 
+            begin { 0 },
+            end { 0 },
+            capacity { get_capacity(capacity) }
+        {   
+            buf = new char[capacity];
+        }
+
+        CircularBuf(std::vector<char>& data, uint32_t capacity=1024):
+            CircularBuf(capacity)
+        {
+            std::memcpy(buf, data.data(), static_cast<uint32_t>(data.size()));
+        }
+
+        CircularBuf(std::string& data, uint32_t capacity=1024):
+            CircularBuf(capacity)
+        {
+            std::memcpy(buf, data.c_str(), static_cast<uint32_t>(data.size()));
+        }
+
+        std::vector<char> read(uint32_t lim=-1) {
+            if (lim < 0 || lim > size()) {
+                lim = size();
+            }
+
+            std::vector<char> data;
+            int i = 0;
+            char c = 0;
+
+            while (lim > i++ && shift(c)) {
+                data.push_back(c);
+            }
+ 
+            return data;
+        }
+
+        std::vector<char> read_to(char delim) {
+            std::vector<char> data;
+
+            char c = 0;
+
+            while (shift(c) && c != delim) {
+                data.push_back(c);
+            }
+
+            return data;
+        }
+
+        uint32_t write(std::vector<char>& data) {
+            int n = 0;
+
+            while (n < data.size() && push(data[n++]));
+
+            return n;
+        }
+
+        ~CircularBuf() {
+            delete buf;
+        }
+};
 
 }
 
