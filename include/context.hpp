@@ -6,7 +6,6 @@
 #include <string>
 #include <thread>
 #include <memory>
-#include "buffer.hpp"
 #include "secure-socket.hpp"
 #include "header.pb.h"
 

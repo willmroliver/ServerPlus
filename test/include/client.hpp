@@ -159,20 +159,23 @@ class Client {
             return true;
         }
 
+        /**
+         * @brief Appends null-terminator to end of message.
+         */
         bool try_send(const std::string req, size_t len = 0) {
             if (!fd) {
                 return false;
             }
 
             if (len == 0) {
-                len = req.size() + 1;
+                len = req.size();
             }
             
             std::vector<char> cipher_text_cpy;
             const char* data;
 
             if (secure) {
-                auto [cipher_text, success] = aes.encrypt(std::vector<char>(req.begin(), req.end()), key, iv);
+                auto [cipher_text, success] = aes.encrypt(std::vector<char>(req.c_str(), req.c_str() + req.size() + 1), key, iv);
 
                 if (!success) {
                     return false;
@@ -184,6 +187,7 @@ class Client {
             }
             else {
                 data = req.c_str();
+                ++len;
             }
 
             auto bytes_sent = 0;
@@ -200,7 +204,12 @@ class Client {
 
             return true;
         }
-
+        
+        /**
+         * @brief Assumes null-terminator present at end of messages and pops by default.
+         * 
+         * @return std::string 
+         */
         std::string try_recv() {
             if (!fd) return "";
 
@@ -219,11 +228,11 @@ class Client {
             }
 
             if (secure) {
-                auto cipher_text = std::vector<char>(buf, buf + len);
                 auto [plain_text, success] = aes.decrypt(std::vector<char>(buf, buf + len), key, iv);
-                return std::string(plain_text.begin(), plain_text.end());
+                return std::string(plain_text.begin(), plain_text.end() - 1);
             }
 
+            --len;
             return { buf, len };
         }
 

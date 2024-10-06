@@ -185,21 +185,20 @@ bool Socket::close_fd() {
     return (status == 0);
 }
 
-std::pair<int, bool> Socket::try_recv(int (*write_cb) (char* dest, unsigned n, void* data), void* arg) {
+std::pair<uint32_t, bool> Socket::try_recv(uint32_t (*write_cb) (char* dest, uint32_t n, void* data) noexcept, void* arg) {
     std::lock_guard lock { recv_mux };
-
-    return buf.write(write_cb, buf.bytes_free(), arg);
+    return { buf.write(write_cb, buf.space(), arg), buf.space() };
 }
 
-std::pair<int, bool> Socket::try_recv() {
-    return try_recv([] (char* dest, unsigned n, void* data) {
+std::pair<uint32_t, bool> Socket::try_recv() {
+    return try_recv([] (char* dest, uint32_t n, void* data) noexcept -> uint32_t {
         auto socket = (Socket*)data;
         auto buffer = socket->buf;
 
         auto nbytes = recvfrom(socket->get_fd(), dest, n, 0, nullptr, 0);
         
         if (nbytes > 0) {
-            return static_cast<int>(nbytes);
+            return static_cast<uint32_t>(nbytes);
         }
 
         if (nbytes == -1) {
@@ -216,8 +215,8 @@ std::pair<int, bool> Socket::try_recv() {
     }, this);
 }
 
-bool Socket::try_send(const std::string& data) {
-    return try_send(std::vector<char>(data.begin(), data.end()), send);
+bool Socket::try_send(const std::string& data, bool terminate) {
+    return try_send(std::vector<char>(data.c_str(), data.c_str() + data.size() + terminate), send);
 }
 
 bool Socket::try_send(const std::vector<char>& data) {
@@ -241,7 +240,7 @@ bool Socket::try_send(const std::vector<char>& data, ssize_t send(int, const voi
 
         while (total < len) {
             if ((bytes_sent = send(fd, bytes + total, len - total, 0)) == -1) {
-                // send error
+                // @todo: send error
                 Logger::get().error(ERR_SOCKET_SEND_FAILED);
                 return false;
             }
@@ -254,13 +253,33 @@ bool Socket::try_send(const std::vector<char>& data, ssize_t send(int, const voi
 }
 
 std::vector<char> Socket::read_buffer(char delim) {
-    if (buf.contains(delim)) {
-        std::lock_guard lock { buf_mux };
-        auto [res, found] = buf.read_to(delim);
-        return res;
+    if (buf.empty()) {
+        return {};
+    } 
+
+    std::lock_guard lock { buf_mux };
+    auto bytes = buf.read_to(delim);
+
+    /**
+     * This might look odd: why not first search the buffer for the delimiter?
+     * O(n) complexity for each is linear, so why not spare implementing a search fn.
+     * Further, the same approach works for multi-byte delimiters.
+     * 
+     * A better question is if we should cancel the op when delim is not found?
+     * 
+     *  - The upside is that the caller does not have to worry about storing and piecing together
+     * partial messages.
+     * 
+     *  - The downside is that we have to check for the delimiter in some way, but this approach is simple
+     * and, as noted above, keeps the class interface small.
+     */
+    if (bytes.back() != delim) {
+        buf.write(bytes);
+        return {};      
     }
 
-    return {};
+    bytes.pop_back();
+    return bytes;
 }
 
 std::string Socket::read_buffer() {
