@@ -6,6 +6,7 @@ target_sources(server_test
     PRIVATE
         main.cpp
         buffer.cpp
+        circular-buffer.cpp
         socket.cpp
         secure-socket.cpp
         context.cpp

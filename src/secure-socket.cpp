@@ -132,8 +132,8 @@ bool SecureSocket::handshake_final() {
     key = secret_hash;
     is_secure = true;
 
-    // Let's send a single byte, value 1, to indicate the success of the handshake.
-    if (!Socket::try_send(std::vector<char> { 1 })) {
+    // Let's send a single byte, value 1 (still null-terminated), to indicate the success of the handshake.
+    if (!Socket::try_send(std::vector<char> { 1, 0 })) {
         Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED);
         return false;
     }
@@ -167,12 +167,12 @@ std::pair<int, bool> SecureSocket::try_recv() {
     return { plain_text.size(), sock_recv.second };
 }
 
-bool SecureSocket::try_send(std::string data) {
+bool SecureSocket::try_send(std::string data, bool terminate) {
     if (!is_secure) {
         return false;
     }
 
-    std::vector<char> plain_text { data.begin(), data.end() };
+    std::vector<char> plain_text { data.c_str(), data.c_str() + data.size() + terminate };
     auto [cipher_text, success] = aes.encrypt(plain_text, key, iv);
 
     if (!success) {

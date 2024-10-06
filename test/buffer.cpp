@@ -2,6 +2,8 @@
 #include <string>
 #include "buffer.hpp"
 
+namespace {
+
 /**
  * @brief Mocks a call to recvfrom()
  * 
@@ -373,4 +375,6 @@ void do_read_from_test(ReadFromTestCase& test) {
 
 BOOST_AUTO_TEST_CASE( buffer_read_from_table_test ) {
     for (auto &test : read_from_tests) do_read_from_test(test);
+}
+
 }
