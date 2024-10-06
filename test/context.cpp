@@ -32,7 +32,6 @@ struct ContextFixture {
         client.handshake_init();
 
         tiny_sleep();
-
         sock.handshake_final();
         client.handshake_final();
         

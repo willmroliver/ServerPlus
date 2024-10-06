@@ -1,6 +1,7 @@
 target_sources(ServerPlus
     PRIVATE
         buffer.cpp
+        circular-buffer.cpp
         context.cpp
         handler.cpp
         logger.cpp
