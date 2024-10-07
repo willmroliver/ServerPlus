@@ -1,3 +1,4 @@
+#include <cstring>
 #include "circular-buffer.hpp"
 
 namespace serv {
@@ -124,7 +125,7 @@ std::vector<char> CircularBuf::read(uint32_t lim) {
     }
 
     std::vector<char> data(lim);
-    int i = 0;
+    uint32_t i = 0;
 
     while (i < lim && shift(data[i++]));
 
@@ -133,14 +134,32 @@ std::vector<char> CircularBuf::read(uint32_t lim) {
 
 std::vector<char> CircularBuf::read_to(char delim) {
     std::vector<char> data(size());
-    int i = 0;
+    uint32_t i = 0;
     bool success;
 
     while ((success = shift(data[i++])) && data[i-1] != delim);
 
-    auto d = std::vector<char>(data.begin(), data.begin() + i - !success);
+    data.resize(i - !success);
+    return data;
+}
 
-    return std::vector<char>(data.begin(), data.begin() + i - !success);
+std::vector<char> CircularBuf::read_to(std::string delim) {
+    std::vector<char> data(size());
+    uint32_t nbytes = delim.size(), lim = size(), i = 0;
+    bool success;
+
+    auto test = [&] (std::vector<char> v, uint32_t from) {
+        if (from + nbytes > lim) {
+            return false;
+        }
+
+        return std::memcmp(delim.c_str(), v.data() + from, nbytes) == 0;
+    };
+
+    while ((success = shift(data[i++])) && !test(data, i-1));
+
+    data.resize(i - !success);
+    return data;
 }
 
 std::vector<char> CircularBuf::read_from(uint32_t offset) {
