@@ -132,6 +132,14 @@ class Socket {
         std::vector<char> read_buffer(char delim);
 
         /**
+         * @brief Retrieves data from the buffer (FIFO) up to the first instance of delim.
+         * 
+         * @param delim A character sequence (delimiting between blocks of data).
+         * @return std::string The message, or an empty string if delim is not found.
+         */
+        std::vector<char> read_buffer(std::string delim);
+
+        /**
          * @brief Retrieves data from the buffer (FIFO) up to the first null-terminator.
          * 
          * @return std::string The message, or an empty string if a null-terminator is not found.

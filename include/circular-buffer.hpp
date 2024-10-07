@@ -53,6 +53,10 @@ class CircularBuf {
 
         std::vector<char> read_to(char delim);
 
+        std::vector<char> read_to(std::string delim);
+
+        std::vector<char> bitmask_read_to(std::string delim);
+
         /**
          * @brief Read all bytes in the underlying buffer from the offset, and move the write pointer to 
          * the offset start.
