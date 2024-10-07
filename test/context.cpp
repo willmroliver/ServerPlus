@@ -98,10 +98,12 @@ struct ReadSockFixture : ContextFixture {
     }
 };
 
+auto concat = [] (const std::string& a, const std::string& b) -> std::string {
+    return a + '\0' + b;
+};
+
 BOOST_FIXTURE_TEST_CASE( read_sock_parses_header_and_request_together, ReadSockFixture ) {
-    auto concat = [] (const std::string& a, const std::string& b) -> std::string {
-        return a + '\0' + b;
-    };
+    
 
     client.try_send(concat(header_data, request_data));
     tiny_sleep();
@@ -124,10 +126,6 @@ BOOST_FIXTURE_TEST_CASE( read_sock_parses_header_and_request_separately, ReadSoc
 }
 
 BOOST_FIXTURE_TEST_CASE( read_sock_parses_header_and_request_sequentially, ReadSockFixture ) {
-    auto concat = [] (const std::string& a, const std::string& b) -> std::string {
-        return a + '\0' + b;
-    };
-
     for (int i = 0; i < 10; i++) {
         client.try_send(concat(header_data, request_data));
         tiny_sleep();

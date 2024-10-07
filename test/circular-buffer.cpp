@@ -1,5 +1,6 @@
 #include <boost/test/unit_test.hpp>
 #include <string>
+#include <chrono>
 #include "circular-buffer.hpp"
 
 namespace {

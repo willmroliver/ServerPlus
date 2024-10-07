@@ -5,7 +5,7 @@ package serv.proto;
 /* This header should precede all usual requests from a peer to the host */
 message Header {
     enum Type {
-        TYPE_UNSPEC = 0;
+        TYPE_UNSPECIFIED = 0;
         TYPE_PING = 1;
         TYPE_HANDSHAKE = 2;
         TYPE_REQUEST = 3;

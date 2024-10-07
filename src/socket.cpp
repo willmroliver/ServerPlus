@@ -255,7 +255,7 @@ bool Socket::try_send(const std::vector<char>& data, ssize_t send(int, const voi
 std::vector<char> Socket::read_buffer(char delim) {
     if (buf.empty()) {
         return {};
-    } 
+    }
 
     std::lock_guard lock { buf_mux };
     auto bytes = buf.read_to(delim);
@@ -274,6 +274,23 @@ std::vector<char> Socket::read_buffer(char delim) {
      * and, as noted above, keeps the class interface small.
      */
     if (bytes.back() != delim) {
+        buf.write(bytes);
+        return {};      
+    }
+
+    bytes.pop_back();
+    return bytes;
+}
+
+std::vector<char> Socket::read_buffer(std::string delim) {
+    if (buf.empty()) {
+        return {};
+    }
+
+    std::lock_guard lock { buf_mux };
+    auto bytes = buf.read_to(delim);
+
+    if (bytes.size() < delim.size() || std::string(bytes.end() - delim.size(), bytes.end()) != delim) {
         buf.write(bytes);
         return {};      
     }
