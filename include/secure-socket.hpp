@@ -48,9 +48,10 @@ class SecureSocket : public Socket {
          * @brief If secure, encrypts and sends sock data. See Socket::try_send()
          * 
          * @param data The data to encrypt and send.
+         * @param terminate Whether to include the null-terminator, default is true.
          * @return bool The success or failure of the attempt to ancrypt and send.
          */
-        bool try_send(std::string data);
+        bool try_send(std::string data, bool terminate=true);
 };
 
 }

@@ -9,7 +9,7 @@
 #include <vector>
 #include <cerrno>
 #include <mutex>
-#include "buffer.hpp"
+#include "circular-buffer.hpp"
 
 using namespace libev;
 
@@ -25,7 +25,7 @@ class Socket {
         bool listening;
         sockaddr_storage addr;
         socklen_t addr_len;
-        Buffer<1024> buf;
+        CircularBuf buf;
         std::mutex recv_mux;
         std::mutex send_mux;
         std::mutex buf_mux;
@@ -92,7 +92,7 @@ class Socket {
          * @param arg The arg to pass in for access within the callback
          * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the buffer has space remaining.
          */
-        std::pair<int, bool> try_recv(int (*write_cb) (char* dest, unsigned n, void* data), void* arg);
+        std::pair<uint32_t, bool> try_recv(uint32_t (*write_cb) (char* dest, uint32_t n, void* data) noexcept, void* arg);
 
         /**
          * @brief Attempts to read available data from the socket stream into a buffer. Uses a default zero-copy callback to write to the buffer
@@ -100,16 +100,17 @@ class Socket {
          * 
          * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the buffer has space remaining.
          */
-        std::pair<int, bool> try_recv();
+        std::pair<uint32_t, bool> try_recv();
         
         /**
          * @brief Attempts to send the bytes stored in data over the network.
          * See man send
          *
          * @param data The data to send 
+         * @param terminate Whether to include the null-terminator, default is true.
          * @return bool The success or failure of the attempt to send all the data. 
          */
-        bool try_send(const std::string& data);
+        bool try_send(const std::string& data, bool terminate=true);
 
         /**
          * @brief Attempts to send the bytes stored in data over the network.
@@ -129,6 +130,14 @@ class Socket {
          * @return std::string The message, or an empty string if delim is not found.
          */
         std::vector<char> read_buffer(char delim);
+
+        /**
+         * @brief Retrieves data from the buffer (FIFO) up to the first instance of delim.
+         * 
+         * @param delim A character sequence (delimiting between blocks of data).
+         * @return std::string The message, or an empty string if delim is not found.
+         */
+        std::vector<char> read_buffer(std::string delim);
 
         /**
          * @brief Retrieves data from the buffer (FIFO) up to the first null-terminator.
