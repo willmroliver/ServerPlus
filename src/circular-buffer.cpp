@@ -119,7 +119,7 @@ bool CircularBuf::empty() const noexcept {
     return r == w;
 }
 
-std::vector<char> CircularBuf::read(uint32_t lim) {
+std::vector<char> CircularBuf::read(uint32_t lim) noexcept {
     if (lim < 0 || lim > size()) {
         lim = size();
     }
@@ -132,7 +132,7 @@ std::vector<char> CircularBuf::read(uint32_t lim) {
     return std::vector<char>(data.begin(), data.begin() + i);
 }
 
-std::vector<char> CircularBuf::read_to(char delim) {
+std::vector<char> CircularBuf::read_to(char delim) noexcept {
     std::vector<char> data(size());
     uint32_t i = 0;
     bool success;
@@ -143,12 +143,12 @@ std::vector<char> CircularBuf::read_to(char delim) {
     return data;
 }
 
-std::vector<char> CircularBuf::read_to(std::string delim) {
+std::vector<char> CircularBuf::read_to(const std::string& delim) noexcept {
     std::vector<char> data(size());
     uint32_t nbytes = delim.size(), lim = size(), i = 0;
     bool success;
 
-    auto test = [&] (std::vector<char> v, uint32_t from) {
+    auto test = [nbytes, lim, &delim] (std::vector<char> v, uint32_t from) {
         if (from + nbytes > lim) {
             return false;
         }
