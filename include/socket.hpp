@@ -64,6 +64,16 @@ class Socket {
         bool try_listen(std::string port);
 
         /**
+         * @brief Attempts to connect to a listening socket via TCP with an IPv4 or IPv6 address.
+         * See man connect & man getaddrinfo.
+         * 
+         * @param host IPv4 or IPv6 host address.
+         * @param port Targeted port on host machine.
+         * @return bool The success or failure of the connection attempt.
+         */
+        bool try_connect(std::string host, std::string port);
+
+        /**
          * @brief Attempts to accept a new connection. See man accept.
          * 
          * @return bool The success or failure of the call to accept().
