@@ -193,7 +193,7 @@ bool SecureSocket::handshake_confirm() {
     }
 
     key = secret_hash;
-    secure = true;
+    is_secure = true;
 
     return true;
 }
