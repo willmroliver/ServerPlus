@@ -45,6 +45,13 @@ class SecureSocket : public Socket {
         bool handshake_final();
 
         /**
+         * @brief Confirms that a handshake has been completed by the host and derives the shared secret + key.
+         * 
+         * @return bool The success or failure of the derivation attempt.
+         */
+        bool handshake_confirm();
+
+        /**
          * @brief If secure, retrieves and decrypts sock data. See Socket::try_rev()
          * 
          * @return std::pair<int, bool> The number of bytes read (-2 indicates socket is not secure, -1 indicates error) and whether the buffer has space remaining.
