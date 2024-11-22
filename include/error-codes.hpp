@@ -25,13 +25,15 @@ constexpr int ERR_UNKNOWN = 10001;  // In practice, we should always endeavour t
 constexpr int ERR_SOCKET_GET_ADDR_INFO_FAILED = 11001;
 constexpr int ERR_SOCKET_BIND_SOCKET_FAILED = 11002;
 constexpr int ERR_SOCKET_LISTEN_FAILED = 11003;
-constexpr int ERR_SOCKET_MAKE_NONBLOCKING_FAILED = 11004;
-constexpr int ERR_SOCKET_ACCEPT_CONN_FAILED = 11005;
-constexpr int ERR_SOCKET_GET_HOST_FAILED = 11006;
-constexpr int ERR_SOCKET_BUFFER_FULL = 11007;
-constexpr int ERR_SOCKET_RECV_FAILED = 11008;
-constexpr int ERR_SOCKET_INVALID_SEND_ATTEMPT = 11009;
-constexpr int ERR_SOCKET_SEND_FAILED = 11010;
+constexpr int ERR_SOCKET_CONNECT_GETADDRINFO_FAILED = 11004;
+constexpr int ERR_SOCKET_CONNECT_FAILED = 1105;
+constexpr int ERR_SOCKET_MAKE_NONBLOCKING_FAILED = 11006;
+constexpr int ERR_SOCKET_ACCEPT_CONN_FAILED = 11007;
+constexpr int ERR_SOCKET_GET_HOST_FAILED = 11008;
+constexpr int ERR_SOCKET_BUFFER_FULL = 11009;
+constexpr int ERR_SOCKET_RECV_FAILED = 11010;
+constexpr int ERR_SOCKET_INVALID_SEND_ATTEMPT = 11011;
+constexpr int ERR_SOCKET_SEND_FAILED = 11012;
 
 // SecureSocket
 constexpr int ERR_SECURE_SOCKET_HANDSHAKE_INIT_FAILED = 12001;
@@ -69,6 +71,8 @@ static std::unordered_map<int, std::string> error_messages = {
     { ERR_SOCKET_GET_ADDR_INFO_FAILED, "Socket: failed to find address information." },
     { ERR_SOCKET_BIND_SOCKET_FAILED, "Socket: failed to open and bind socket." },
     { ERR_SOCKET_LISTEN_FAILED, "Socket: failed to start listening on bound socket." },
+    { ERR_SOCKET_CONNECT_GETADDRINFO_FAILED, "Socket: failed to lookup target host and port." },
+    { ERR_SOCKET_CONNECT_FAILED, "Socket: failed to connect to host after lookup." },
     { ERR_SOCKET_MAKE_NONBLOCKING_FAILED, "Socket: failed to make socket non-blocking." },
     { ERR_SOCKET_ACCEPT_CONN_FAILED, "Socket: failed to accept incoming connection." },
     { ERR_SOCKET_GET_HOST_FAILED, "Socket: failed to get host information." },

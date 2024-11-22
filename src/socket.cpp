@@ -68,7 +68,7 @@ Socket::~Socket() {
     }
 }
 
-bool Socket::try_listen(std::string port, int family, int socktype, int flags) { 
+bool Socket::try_listen(const std::string& port, int family, int socktype, int flags) { 
     if (fd != 0) return false;
 
     addrinfo hints, *ai, *p;
@@ -131,11 +131,11 @@ bool Socket::try_listen(std::string port, int family, int socktype, int flags) {
     return true;
 }
 
-bool Socket::try_listen(std::string port) {
+bool Socket::try_listen(const std::string& port) {
     return try_listen(port, AF_UNSPEC, SOCK_STREAM, AI_PASSIVE);
 }
 
-bool Socket::try_connect(std::string host, std::string port) {
+bool Socket::try_connect(const std::string& host, const std::string& port) {
     addrinfo hints, *ai, *p;
     memset(&hints, 0, sizeof hints);
 
@@ -144,9 +144,9 @@ bool Socket::try_connect(std::string host, std::string port) {
 
     int gai;
 
-    if ((gai = getaddrinfo(nullptr, port.c_str(), &hints, &ai)) != 0) {
+    if ((gai = getaddrinfo(host == "" ? nullptr : host.c_str(), port.c_str(), &hints, &ai)) != 0) {
         Logger::get().error(ERR_SOCKET_CONNECT_GETADDRINFO_FAILED);
-        Logger::get().error("server: socket: getaddrinfo: " + gai_strerror(gai));
+        Logger::get().error("server: socket: getaddrinfo: " + std::string(gai_strerror(gai)));
         return false;
     }
 
@@ -170,17 +170,10 @@ bool Socket::try_connect(std::string host, std::string port) {
         return false;
     }
 
-    addr = p->ai_addr;
     addr_len = p->ai_addrlen;
-
-    char host[NI_MAXHOST];
-
-    if ((gai = getnameinfo(p->ai_addr, p->ai_addrlen, host, NI_MAXHOST, nullptr, 0, NI_NUMERICSERV)) != 0) {
-        Logger::get().error("server: socket: getnameinfo: " + gai_strerror(gai));
-    }
-
+    std::memcpy(&addr, p->ai_addr, addr_len);
     freeaddrinfo(ai);
-
+    
     return true;
 }
 
