@@ -52,7 +52,7 @@ class Socket {
          * @param flags Input flags
          * @return bool The success or failure of the attempt to bind to the port. 
          */
-        bool try_listen(std::string port, int family, int socktype, int flags);
+        bool try_listen(const std::string& port, int family, int socktype, int flags);
 
         /**
          * @brief Attempts to listen for TCP IPv4 & IPv6 connections. 
@@ -61,7 +61,7 @@ class Socket {
          * @param port The port to listen to connections on
          * @return bool The success or failure of the attempt to bind to the port. 
          */
-        bool try_listen(std::string port);
+        bool try_listen(const std::string& port);
 
         /**
          * @brief Attempts to connect to a listening socket via TCP with an IPv4 or IPv6 address.
@@ -71,7 +71,7 @@ class Socket {
          * @param port Targeted port on host machine.
          * @return bool The success or failure of the connection attempt.
          */
-        bool try_connect(std::string host, std::string port);
+        bool try_connect(const std::string& host, const std::string& port);
 
         /**
          * @brief Attempts to accept a new connection. See man accept.
