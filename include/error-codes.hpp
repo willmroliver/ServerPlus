@@ -42,8 +42,9 @@ constexpr int ERR_SECURE_SOCKET_HANDSHAKE_FINAL_PARSE_FAILED = 12005;
 constexpr int ERR_SECURE_SOCKET_HANDSHAKE_FINAL_DERIVE_FAILED = 12006;
 constexpr int ERR_SECURE_SOCKET_HANDSHAKE_FINAL_HASH_FAILED = 12007;
 constexpr int ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED = 12008;
-constexpr int ERR_SECURE_SOCKET_RECV_FAILED = 12009;
-constexpr int ERR_SECURE_SOCKET_SEND_FAILED = 12010;
+constexpr int ERR_SECURE_SOCKET_HANDSHAKE_CONFIRM_DERIVE_FAILED = 12009;
+constexpr int ERR_SECURE_SOCKET_RECV_FAILED = 12010;
+constexpr int ERR_SECURE_SOCKET_SEND_FAILED = 12011;
 
 // Context
 constexpr int ERR_CONTEXT_BUFFER_FULL = 13001;
@@ -83,8 +84,9 @@ static std::unordered_map<int, std::string> error_messages = {
     { ERR_SECURE_SOCKET_HANDSHAKE_ACCEPT_SEND_FAILED, "SecureSocket: failed to send handshake response." },
     { ERR_SECURE_SOCKET_HANDSHAKE_FINAL_PARSE_FAILED, "SecureSocket: failed to parse handshake response." },
     { ERR_SECURE_SOCKET_HANDSHAKE_FINAL_DERIVE_FAILED, "SecureSocket: failed to derive shared secret (host)." },
-    { ERR_SECURE_SOCKET_HANDSHAKE_FINAL_HASH_FAILED, "SecureSocket: failed to generate symmetric key." },
+    { ERR_SECURE_SOCKET_HANDSHAKE_FINAL_HASH_FAILED, "SecureSocket: failed to generate symmetric key (host)." },
     { ERR_SECURE_SOCKET_HANDSHAKE_FINAL_FAILED, "SecureSocket: failed to finalize handshake." },
+    { ERR_SECURE_SOCKET_HANDSHAKE_CONFIRM_DERIVE_FAILED, "SecureSocket: failed to generate symmetric key (peer)." },
     { ERR_SECURE_SOCKET_RECV_FAILED, "SecureSocket: failed to receive incoming data" },
     { ERR_SECURE_SOCKET_SEND_FAILED, "SecureSocket: failed to send data." },
 
