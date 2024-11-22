@@ -135,6 +135,55 @@ bool Socket::try_listen(std::string port) {
     return try_listen(port, AF_UNSPEC, SOCK_STREAM, AI_PASSIVE);
 }
 
+bool Socket::try_connect(std::string host, std::string port) {
+    addrinfo hints, *ai, *p;
+    memset(&hints, 0, sizeof hints);
+
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    int gai;
+
+    if ((gai = getaddrinfo(nullptr, port.c_str(), &hints, &ai)) != 0) {
+        Logger::get().error(ERR_SOCKET_CONNECT_GETADDRINFO_FAILED);
+        Logger::get().error("server: socket: getaddrinfo: " + gai_strerror(gai));
+        return false;
+    }
+
+    for (p = ai; p; p = p->ai_next) {
+        if ((fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+            perror("socket");
+            continue;
+        }
+
+        if (connect(fd, p->ai_addr, p->ai_addrlen) == -1) {
+            perror("connect");
+            continue;
+        }
+
+        break;
+    }
+
+    if (p == nullptr) {
+        Logger::get().error(ERR_SOCKET_CONNECT_FAILED);
+        Logger::get().error("server: socket: failed to connect");
+        return false;
+    }
+
+    addr = p->ai_addr;
+    addr_len = p->ai_addrlen;
+
+    char host[NI_MAXHOST];
+
+    if ((gai = getnameinfo(p->ai_addr, p->ai_addrlen, host, NI_MAXHOST, nullptr, 0, NI_NUMERICSERV)) != 0) {
+        Logger::get().error("server: socket: getnameinfo: " + gai_strerror(gai));
+    }
+
+    freeaddrinfo(ai);
+
+    return true;
+}
+
 bool Socket::try_accept(Socket& socket) {
     if (!listening || socket.get_fd() > 0) return false;
     
