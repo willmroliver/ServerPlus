@@ -31,6 +31,13 @@ class SecureSocket : public Socket {
         bool handshake_init();
 
         /**
+         * @brief Accepts a handshake initializtion and returns its own public key to the requestor.
+         *
+         * @return bool The success or failure of the accept attempt.
+         */
+        bool handshake_accept();
+
+        /**
          * @brief Retrieve the public key from the peer and attempt to derive a shared secret & 256-bit key.
          * 
          * @return bool The success or failure of the retrieval & derivation attempt.
