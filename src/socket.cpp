@@ -262,8 +262,8 @@ std::vector<char> Socket::read_buffer(char delim) {
 
     /**
      * This might look odd: why not first search the buffer for the delimiter?
-     * O(n) complexity for each is linear, so why not spare implementing a search fn.
-     * Further, the same approach works for multi-byte delimiters.
+     * O(n) complexity for each is linear, so idea is to spare implementing a search fn
+     * with an approach that works equally well for multi-byte delimiters.
      * 
      * A better question is if we should cancel the op when delim is not found?
      * 

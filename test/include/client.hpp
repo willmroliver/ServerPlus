@@ -103,10 +103,10 @@ class Client {
             if (!host_hs.ParseFromString(try_recv())) {
                 return false;
             }
-            
+
             dh = crpt::Exchange("ffdhe2048");
             iv = std::vector<char>(host_hs.iv().begin(), host_hs.iv().end());
-
+            
             crpt::PublicKeyDER host_pk;
             auto host_pk_str = host_hs.public_key();
             host_pk.from_vector({ host_pk_str.begin(), host_pk_str.end() });
