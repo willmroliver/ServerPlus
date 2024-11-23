@@ -17,7 +17,8 @@ class SecureSocket : public Socket {
         bool is_secure = false;
     
     public:
-        SecureSocket();
+        SecureSocket() = default;
+        SecureSocket(Socket&& s);
         SecureSocket(SecureSocket& sock);
         SecureSocket(SecureSocket&& sock);
         SecureSocket& operator=(SecureSocket& sock);
@@ -54,9 +55,9 @@ class SecureSocket : public Socket {
         /**
          * @brief If secure, retrieves and decrypts sock data. See Socket::try_rev()
          * 
-         * @return std::pair<int, bool> The number of bytes read (-2 indicates socket is not secure, -1 indicates error) and whether the buffer has space remaining.
+         * @return std::pair<int, bool> The number of bytes read (-2 indicates socket is not secure, -1 indicates error) and the remaining buffer space.
          */
-        std::pair<int, bool> try_recv();
+        std::pair<int32_t, uint32_t> try_recv();
 
         /**
          * @brief If secure, encrypts and sends sock data. See Socket::try_send()
