@@ -12,24 +12,17 @@
 
 using namespace serv;
 
-SecureSocket::SecureSocket(): 
-    Socket {}
+SecureSocket::SecureSocket(Socket&& sock):
+    Socket { std::move(sock) }
 {}
 
 SecureSocket::SecureSocket(SecureSocket& sock): 
     Socket { sock },
-    aes { "AES-256-CBC" },
-    dh { "ffdhe2048" },
-    shared_secret { sock.shared_secret },
-    key { sock.key },
-    iv { sock.iv },
-    is_secure { sock.is_secure }
+    is_secure { false }
 {}
 
 SecureSocket::SecureSocket(SecureSocket&& sock): 
     Socket { std::move(sock) },
-    aes { "AES-256-CBC" },
-    dh { "ffdhe2048" },
     shared_secret { sock.shared_secret },
     key { sock.key },
     iv { sock.iv },
@@ -44,8 +37,6 @@ SecureSocket::SecureSocket(SecureSocket&& sock):
 SecureSocket& SecureSocket::operator=(SecureSocket& sock) {
     Socket::operator=(sock);
 
-    aes = crpt::Crypt("AES-256-CBC");
-    dh = crpt::Exchange("ffdhe2048");
     shared_secret = sock.shared_secret;
     key = sock.key;
     iv = sock.iv;
@@ -57,8 +48,6 @@ SecureSocket& SecureSocket::operator=(SecureSocket& sock) {
 SecureSocket& SecureSocket::operator=(SecureSocket&& sock) {
     Socket::operator=(std::move(sock));
 
-    aes = crpt::Crypt("AES-256-CBC");
-    dh = crpt::Exchange("ffdhe2048");
     shared_secret = sock.shared_secret;
     key = sock.key;
     iv = sock.iv;
@@ -105,7 +94,7 @@ bool SecureSocket::handshake_accept() {
     auto bytes = Socket::flush_buffer();
     std::string data { bytes.begin(), bytes.end() - 1 };
     
-    serv::proto::HostHandshake host_hs;
+    proto::HostHandshake host_hs;
     if (!host_hs.ParseFromString(data)) {
         Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_ACCEPT_PARSE_FAILED);   
         return false;
@@ -122,7 +111,7 @@ bool SecureSocket::handshake_accept() {
         return false;
     }
 
-    serv::proto::PeerHandshake peer_hs;
+    proto::PeerHandshake peer_hs;
     auto peer_pk = dh.get_public_key().to_vector();
     peer_hs.set_public_key({ peer_pk.begin(), peer_pk.end() });
 
@@ -180,13 +169,15 @@ bool SecureSocket::handshake_final() {
 }
 
 bool SecureSocket::handshake_confirm() {
-    auto [nbytes, _] = Socket::try_recv();
+    auto [nbytes, _] = Socket::try_recv(2); // { 1, 0 }
 
     if (nbytes < 1) {
         return false;
     }
 
-    auto [secret_hash, success] = crpt::Crypt::hash(dh.get_secret());
+    shared_secret = dh.get_secret();
+    auto [secret_hash, success] = crpt::Crypt::hash(shared_secret);
+
     if (!success) {
         Logger::get().error(ERR_SECURE_SOCKET_HANDSHAKE_CONFIRM_DERIVE_FAILED);
         return false;
@@ -198,7 +189,7 @@ bool SecureSocket::handshake_confirm() {
     return true;
 }
 
-std::pair<int, bool> SecureSocket::try_recv() {
+std::pair<int32_t, uint32_t> SecureSocket::try_recv() {
     if (!is_secure) {
         Socket::try_recv();
         Socket::clear_buffer();

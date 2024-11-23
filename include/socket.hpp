@@ -71,7 +71,7 @@ class Socket {
          * @param port Targeted port on host machine.
          * @return bool The success or failure of the connection attempt.
          */
-        bool try_connect(const std::string& host, const std::string& port);
+        bool try_connect(const std::string& host, const std::string& port, bool nonblocking = true);
 
         /**
          * @brief Attempts to accept a new connection. See man accept.
@@ -100,17 +100,21 @@ class Socket {
          * 
          * @param write_cb The callback to pass to the buffer's write function. See Buffer<T>::write()
          * @param arg The arg to pass in for access within the callback
+         * @param len If non-zero, recvfrom will block until len bytes are read.
+         * 
          * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the buffer has space remaining.
          */
-        std::pair<uint32_t, bool> try_recv(uint32_t (*write_cb) (char* dest, uint32_t n, void* data) noexcept, void* arg);
+        std::pair<int32_t, uint32_t> try_recv(uint32_t (*write_cb) (char* dest, uint32_t n, void* data) noexcept, void* arg, uint32_t len = 0);
 
         /**
          * @brief Attempts to read available data from the socket stream into a buffer. Uses a default zero-copy callback to write to the buffer
          * See man recvfrom
          * 
-         * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the buffer has space remaining.
+         * @param len If non-zero, recvfrom will block until len bytes are read.
+         * 
+         * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and the remaining space in the buffer.
          */
-        std::pair<uint32_t, bool> try_recv();
+        std::pair<int32_t, uint32_t> try_recv(uint32_t len = 0);
         
         /**
          * @brief Attempts to send the bytes stored in data over the network.
