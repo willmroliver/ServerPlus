@@ -115,7 +115,7 @@ bool Socket::try_listen(const std::string& port, int family, int socktype, int f
 
     if (evutil_make_socket_nonblocking(fd) == -1) {
         Logger::get().error(ERR_SOCKET_MAKE_NONBLOCKING_FAILED);
-        Logger::get().error("server: socket: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
+        Logger::get().error("server: socket: listen: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
         return false;
     }
 
@@ -135,7 +135,7 @@ bool Socket::try_listen(const std::string& port) {
     return try_listen(port, AF_UNSPEC, SOCK_STREAM, AI_PASSIVE);
 }
 
-bool Socket::try_connect(const std::string& host, const std::string& port) {
+bool Socket::try_connect(const std::string& host, const std::string& port, bool nonblocking) {
     addrinfo hints, *ai, *p;
     memset(&hints, 0, sizeof hints);
 
@@ -173,6 +173,12 @@ bool Socket::try_connect(const std::string& host, const std::string& port) {
     addr_len = p->ai_addrlen;
     std::memcpy(&addr, p->ai_addr, addr_len);
     freeaddrinfo(ai);
+
+    if (nonblocking && evutil_make_socket_nonblocking(fd) == -1) {
+        Logger::get().error(ERR_SOCKET_MAKE_NONBLOCKING_FAILED);
+        Logger::get().error("server: socket: connect: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
+        return false;
+    }
     
     return true;
 }
@@ -193,7 +199,7 @@ bool Socket::try_accept(Socket& socket) {
 
     if (evutil_make_socket_nonblocking(sock_fd) == -1) {
         Logger::get().error(ERR_SOCKET_MAKE_NONBLOCKING_FAILED);
-        Logger::get().error("server: socket: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
+        Logger::get().error("server: socket: accept: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
         return false;
     }
 
@@ -227,18 +233,17 @@ bool Socket::close_fd() {
     return (status == 0);
 }
 
-std::pair<uint32_t, bool> Socket::try_recv(uint32_t (*write_cb) (char* dest, uint32_t n, void* data) noexcept, void* arg) {
+std::pair<int32_t, uint32_t> Socket::try_recv(uint32_t (*write_cb) (char* dest, uint32_t n, void* data) noexcept, void* arg, uint32_t len) {
     std::lock_guard lock { recv_mux };
-    return { buf.write(write_cb, buf.space(), arg), buf.space() };
+    return { buf.write(write_cb, len ? len : buf.space(), arg), buf.space() };
 }
 
-std::pair<uint32_t, bool> Socket::try_recv() {
+std::pair<int32_t, uint32_t> Socket::try_recv(uint32_t len) {
     return try_recv([] (char* dest, uint32_t n, void* data) noexcept -> uint32_t {
         auto socket = (Socket*)data;
         auto buffer = socket->buf;
 
         auto nbytes = recvfrom(socket->get_fd(), dest, n, 0, nullptr, 0);
-        
         if (nbytes > 0) {
             return static_cast<uint32_t>(nbytes);
         }
@@ -254,7 +259,7 @@ std::pair<uint32_t, bool> Socket::try_recv() {
         }
 
         return 0;
-    }, this);
+    }, this, len);
 }
 
 bool Socket::try_send(const std::string& data, bool terminate) {

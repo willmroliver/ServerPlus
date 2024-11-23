@@ -68,11 +68,11 @@ BOOST_FIXTURE_TEST_CASE( read_sock_handles_malformed_data, ContextFixture ) {
 
     tiny_sleep();
     ctx->read_sock();
-
     ASSERT_ERR_LOGGED(ERR_CONTEXT_HANDLE_READ_FAILED);
 
     serv::proto::Error err;
     BOOST_ASSERT( err.ParseFromString(client.try_recv()) );
+
     BOOST_ASSERT( err.code() == ERR_CONTEXT_HANDLE_READ_FAILED );
 }
 
@@ -103,8 +103,6 @@ auto concat = [] (const std::string& a, const std::string& b) -> std::string {
 };
 
 BOOST_FIXTURE_TEST_CASE( read_sock_parses_header_and_request_together, ReadSockFixture ) {
-    
-
     client.try_send(concat(header_data, request_data));
     tiny_sleep();
     ctx->read_sock();
