@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <fcntl.h>
 
 #include "socket.hpp"
 #include "logger.hpp"
@@ -9,7 +10,9 @@ using namespace serv;
 
 Socket::Socket(): 
     fd { 0 },
-    listening { false }
+    listening { false },
+    nonblocking { true },
+    recv_flags { 0 }
 {
     addr_len = sizeof addr;
     std::memset(&addr, 0, addr_len);
@@ -18,6 +21,8 @@ Socket::Socket():
 Socket::Socket(Socket& sock): 
     fd { sock.fd },
     listening { sock.listening },
+    nonblocking { sock.nonblocking },
+    recv_flags { sock.recv_flags },
     addr { sock.addr },
     addr_len { sock.addr_len },
     buf { sock.buf }
@@ -26,12 +31,16 @@ Socket::Socket(Socket& sock):
 Socket::Socket(Socket&& sock): 
     fd { sock.fd },
     listening { sock.listening },
+    nonblocking { sock.nonblocking },
+    recv_flags { sock.recv_flags },
     addr { sock.addr },
     addr_len { sock.addr_len },
     buf { sock.buf }
 {
     sock.fd = 0;
     sock.listening = false;
+    sock.nonblocking = false;
+    sock.recv_flags = 0;
     std::memset(&sock.addr, 0, sock.addr_len);
     sock.addr_len = 0;
     sock.buf.clear();
@@ -40,6 +49,8 @@ Socket::Socket(Socket&& sock):
 Socket& Socket::operator=(Socket& sock) {
     fd = sock.fd;
     listening = sock.listening;
+    nonblocking = sock.nonblocking;
+    recv_flags = sock.recv_flags;
     addr = sock.addr;
     addr_len = sock.addr_len;
     buf = sock.buf;
@@ -49,12 +60,16 @@ Socket& Socket::operator=(Socket& sock) {
 Socket& Socket::operator=(Socket&& sock) {
     fd = sock.fd;
     listening = sock.listening;
+    nonblocking = sock.nonblocking;
+    recv_flags = sock.recv_flags;
     addr = sock.addr;
     addr_len = sock.addr_len;
     buf = sock.buf;
 
     sock.fd = 0;
     sock.listening = false;
+    sock.nonblocking = false;
+    sock.recv_flags = 0;
     std::memset(&sock.addr, 0, sock.addr_len);
     sock.addr_len = 0;
     sock.buf.clear();
@@ -68,7 +83,7 @@ Socket::~Socket() {
     }
 }
 
-bool Socket::try_listen(std::string port, int family, int socktype, int flags) { 
+bool Socket::try_listen(const std::string& port, int family, int socktype, int flags) { 
     if (fd != 0) return false;
 
     addrinfo hints, *ai, *p;
@@ -115,7 +130,7 @@ bool Socket::try_listen(std::string port, int family, int socktype, int flags) {
 
     if (evutil_make_socket_nonblocking(fd) == -1) {
         Logger::get().error(ERR_SOCKET_MAKE_NONBLOCKING_FAILED);
-        Logger::get().error("server: socket: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
+        Logger::get().error("server: socket: listen: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
         return false;
     }
 
@@ -131,8 +146,58 @@ bool Socket::try_listen(std::string port, int family, int socktype, int flags) {
     return true;
 }
 
-bool Socket::try_listen(std::string port) {
+bool Socket::try_listen(const std::string& port) {
     return try_listen(port, AF_UNSPEC, SOCK_STREAM, AI_PASSIVE);
+}
+
+bool Socket::try_connect(const std::string& host, const std::string& port, bool nonblocking) {
+    addrinfo hints, *ai, *p;
+    memset(&hints, 0, sizeof hints);
+
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    int gai;
+
+    if ((gai = getaddrinfo(host == "" ? nullptr : host.c_str(), port.c_str(), &hints, &ai)) != 0) {
+        Logger::get().error(ERR_SOCKET_CONNECT_GETADDRINFO_FAILED);
+        Logger::get().error("server: socket: getaddrinfo: " + std::string(gai_strerror(gai)));
+        return false;
+    }
+
+    for (p = ai; p; p = p->ai_next) {
+        if ((fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+            perror("socket");
+            continue;
+        }
+
+        if (connect(fd, p->ai_addr, p->ai_addrlen) == -1) {
+            perror("connect");
+            continue;
+        }
+
+        break;
+    }
+
+    if (p == nullptr) {
+        Logger::get().error(ERR_SOCKET_CONNECT_FAILED);
+        Logger::get().error("server: socket: failed to connect");
+        return false;
+    }
+
+    addr_len = p->ai_addrlen;
+    std::memcpy(&addr, p->ai_addr, addr_len);
+    freeaddrinfo(ai);
+
+    if (nonblocking && evutil_make_socket_nonblocking(fd) == -1) {
+        Logger::get().error(ERR_SOCKET_MAKE_NONBLOCKING_FAILED);
+        Logger::get().error("server: socket: connect: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
+        return false;
+    }
+    
+    this->nonblocking = nonblocking;
+
+    return true;
 }
 
 bool Socket::try_accept(Socket& socket) {
@@ -151,7 +216,7 @@ bool Socket::try_accept(Socket& socket) {
 
     if (evutil_make_socket_nonblocking(sock_fd) == -1) {
         Logger::get().error(ERR_SOCKET_MAKE_NONBLOCKING_FAILED);
-        Logger::get().error("server: socket: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
+        Logger::get().error("server: socket: accept: evutil_make_socket_nonblocking: " + std::string(strerror(errno)));
         return false;
     }
 
@@ -185,18 +250,47 @@ bool Socket::close_fd() {
     return (status == 0);
 }
 
-std::pair<uint32_t, bool> Socket::try_recv(uint32_t (*write_cb) (char* dest, uint32_t n, void* data) noexcept, void* arg) {
+std::pair<int32_t, uint32_t> Socket::try_recv(uint32_t (*write_cb) (char* dest, uint32_t n, void* data) noexcept, void* arg, uint32_t len) {
     std::lock_guard lock { recv_mux };
-    return { buf.write(write_cb, buf.space(), arg), buf.space() };
+
+    recv_flags = 0;
+    return { 
+        buf.write(write_cb, len ? len : buf.space(), arg), 
+        buf.space() 
+    };
 }
 
-std::pair<uint32_t, bool> Socket::try_recv() {
+std::pair<int32_t, uint32_t> Socket::try_recv(uint32_t len) {
+    /**
+     * Our circular buffer implements its zero-copy writing in such a way that it expects the socket not to block.
+     * 
+     * To support blocking I/O, we can let the first call to recvfrom block, so that the caller gets the expected
+     * behaviour of waiting for data to be available.
+     * 
+     * Then, enable O_NONBLOCK for all subsequent calls. The `recv_flags` lets us carry information across the
+     * execution lifecycle of a call to Socket::try_recv.
+     * 
+     * Notice that it is implemented such that there is no system call overhead to non-blocking I/O.
+     */
     return try_recv([] (char* dest, uint32_t n, void* data) noexcept -> uint32_t {
-        auto socket = (Socket*)data;
-        auto buffer = socket->buf;
+        static constexpr int DIRTY = 1;
 
-        auto nbytes = recvfrom(socket->get_fd(), dest, n, 0, nullptr, 0);
+        auto socket = (Socket*)data;
+        int fd_flags = -1;
+
+        if (!socket->nonblocking && (socket->recv_flags & DIRTY)) {
+            fd_flags = fcntl(socket->fd, F_GETFL);
+            fcntl(socket->fd, F_SETFL, fd_flags | O_NONBLOCK);
+        }
+
+        auto nbytes = recvfrom(socket->fd, dest, n, 0, nullptr, 0);
         
+        socket->recv_flags |= DIRTY;
+
+        if (fd_flags >= 0) {
+            fcntl(socket->fd, F_SETFL, fd_flags);
+        }
+
         if (nbytes > 0) {
             return static_cast<uint32_t>(nbytes);
         }
@@ -207,12 +301,12 @@ std::pair<uint32_t, bool> Socket::try_recv() {
             }
         }
         else {
-            Logger::get().log("context: peer closed connection on sock " + std::to_string(socket->get_fd()));
+            Logger::get().log("context: peer closed connection on sock " + std::to_string(socket->fd));
             socket->close_fd();
         }
 
         return 0;
-    }, this);
+    }, this, len);
 }
 
 bool Socket::try_send(const std::string& data, bool terminate) {
@@ -262,8 +356,8 @@ std::vector<char> Socket::read_buffer(char delim) {
 
     /**
      * This might look odd: why not first search the buffer for the delimiter?
-     * O(n) complexity for each is linear, so why not spare implementing a search fn.
-     * Further, the same approach works for multi-byte delimiters.
+     * O(n) complexity for each is linear, so idea is to spare implementing a search fn
+     * with an approach that works equally well for multi-byte delimiters.
      * 
      * A better question is if we should cancel the op when delim is not found?
      * 

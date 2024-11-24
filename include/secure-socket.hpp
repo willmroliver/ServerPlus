@@ -17,7 +17,8 @@ class SecureSocket : public Socket {
         bool is_secure = false;
     
     public:
-        SecureSocket();
+        SecureSocket() = default;
+        SecureSocket(Socket&& s);
         SecureSocket(SecureSocket& sock);
         SecureSocket(SecureSocket&& sock);
         SecureSocket& operator=(SecureSocket& sock);
@@ -31,6 +32,13 @@ class SecureSocket : public Socket {
         bool handshake_init();
 
         /**
+         * @brief Accepts a handshake initializtion and returns its own public key to the requestor.
+         *
+         * @return bool The success or failure of the accept attempt.
+         */
+        bool handshake_accept();
+
+        /**
          * @brief Retrieve the public key from the peer and attempt to derive a shared secret & 256-bit key.
          * 
          * @return bool The success or failure of the retrieval & derivation attempt.
@@ -38,11 +46,18 @@ class SecureSocket : public Socket {
         bool handshake_final();
 
         /**
+         * @brief Confirms that a handshake has been completed by the host and derives the shared secret + key.
+         * 
+         * @return bool The success or failure of the derivation attempt.
+         */
+        bool handshake_confirm();
+
+        /**
          * @brief If secure, retrieves and decrypts sock data. See Socket::try_rev()
          * 
-         * @return std::pair<int, bool> The number of bytes read (-2 indicates socket is not secure, -1 indicates error) and whether the buffer has space remaining.
+         * @return std::pair<int, bool> The number of bytes read (-2 indicates socket is not secure, -1 indicates error) and the remaining buffer space.
          */
-        std::pair<int, bool> try_recv();
+        std::pair<int32_t, uint32_t> try_recv();
 
         /**
          * @brief If secure, encrypts and sends sock data. See Socket::try_send()

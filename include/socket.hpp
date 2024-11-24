@@ -23,6 +23,8 @@ class Socket {
     protected:
         evutil_socket_t fd;
         bool listening;
+        bool nonblocking;
+        int recv_flags;
         sockaddr_storage addr;
         socklen_t addr_len;
         CircularBuf buf;
@@ -52,7 +54,7 @@ class Socket {
          * @param flags Input flags
          * @return bool The success or failure of the attempt to bind to the port. 
          */
-        bool try_listen(std::string port, int family, int socktype, int flags);
+        bool try_listen(const std::string& port, int family, int socktype, int flags);
 
         /**
          * @brief Attempts to listen for TCP IPv4 & IPv6 connections. 
@@ -61,7 +63,17 @@ class Socket {
          * @param port The port to listen to connections on
          * @return bool The success or failure of the attempt to bind to the port. 
          */
-        bool try_listen(std::string port);
+        bool try_listen(const std::string& port);
+
+        /**
+         * @brief Attempts to connect to a listening socket via TCP with an IPv4 or IPv6 address.
+         * See man connect & man getaddrinfo.
+         * 
+         * @param host IPv4 or IPv6 host address.
+         * @param port Targeted port on host machine.
+         * @return bool The success or failure of the connection attempt.
+         */
+        bool try_connect(const std::string& host, const std::string& port, bool nonblocking = true);
 
         /**
          * @brief Attempts to accept a new connection. See man accept.
@@ -90,17 +102,21 @@ class Socket {
          * 
          * @param write_cb The callback to pass to the buffer's write function. See Buffer<T>::write()
          * @param arg The arg to pass in for access within the callback
+         * @param len If non-zero, recvfrom will block until len bytes are read.
+         * 
          * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the buffer has space remaining.
          */
-        std::pair<uint32_t, bool> try_recv(uint32_t (*write_cb) (char* dest, uint32_t n, void* data) noexcept, void* arg);
+        std::pair<int32_t, uint32_t> try_recv(uint32_t (*write_cb) (char* dest, uint32_t n, void* data) noexcept, void* arg, uint32_t len = 0);
 
         /**
          * @brief Attempts to read available data from the socket stream into a buffer. Uses a default zero-copy callback to write to the buffer
          * See man recvfrom
          * 
-         * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and whether the buffer has space remaining.
+         * @param len If non-zero, recvfrom will block until len bytes are read.
+         * 
+         * @return std::pair<int, bool> The number of bytes read (-1 indicates an error) and the remaining space in the buffer.
          */
-        std::pair<uint32_t, bool> try_recv();
+        std::pair<int32_t, uint32_t> try_recv(uint32_t len = 0);
         
         /**
          * @brief Attempts to send the bytes stored in data over the network.

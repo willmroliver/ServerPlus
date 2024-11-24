@@ -209,7 +209,6 @@ uint32_t CircularBuf::write(uint32_t cb(char* dest, uint32_t n, void* data) noex
     n = std::min(n, space());
 
     uint32_t shift;
-
     if (_w < _r || !_r) {
         shift = cb(buf + _w, n, data);
         w += shift;
