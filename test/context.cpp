@@ -71,7 +71,8 @@ BOOST_FIXTURE_TEST_CASE( read_sock_handles_malformed_data, ContextFixture ) {
     ASSERT_ERR_LOGGED(ERR_CONTEXT_HANDLE_READ_FAILED);
 
     serv::proto::Error err;
-    BOOST_ASSERT( err.ParseFromString(client.try_recv()) );
+    auto data = client.try_recv();
+    BOOST_ASSERT( err.ParseFromString(data) );
 
     BOOST_ASSERT( err.code() == ERR_CONTEXT_HANDLE_READ_FAILED );
 }

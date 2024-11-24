@@ -1,0 +1,8 @@
+# C++ — 4 spaces, no tabs.
+# Matches the nvim indent rules for .cc/.cpp/.hh/.hpp (lua/modules/format/indent.lua).
+# Copy into a C++ project root as .clang-format.
+BasedOnStyle: LLVM
+UseTab: Never
+IndentWidth: 4
+TabWidth: 4
+ContinuationIndentWidth: 4

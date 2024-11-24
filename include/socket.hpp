@@ -23,6 +23,8 @@ class Socket {
     protected:
         evutil_socket_t fd;
         bool listening;
+        bool nonblocking;
+        int recv_flags;
         sockaddr_storage addr;
         socklen_t addr_len;
         CircularBuf buf;

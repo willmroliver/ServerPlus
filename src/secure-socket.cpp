@@ -171,7 +171,12 @@ bool SecureSocket::handshake_final() {
 bool SecureSocket::handshake_confirm() {
     auto [nbytes, _] = Socket::try_recv(2); // { 1, 0 }
 
-    if (nbytes < 1) {
+    if (nbytes != 2) {
+        return false;
+    }
+
+    auto res = read_buffer(0);
+    if (res.front() != 1) {
         return false;
     }
 
