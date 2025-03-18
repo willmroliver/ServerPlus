@@ -55,19 +55,19 @@ CircularBuf::CircularBuf(std::string& data, uint32_t capacity):
 }
 
 CircularBuf::CircularBuf(const CircularBuf& c):
+    buf { new char[c.capacity] },
     r { c.r },
     w { c.w },
-    capacity { c.capacity },
-    buf { new char[c.capacity] }
+    capacity { c.capacity }
 {
     std::memcpy(buf, c.buf, c.capacity);
 }
 
 CircularBuf::CircularBuf(CircularBuf&& c):
+    buf { c.buf },
     r { c.r },
     w { c.w },
-    capacity { c.capacity },
-    buf { c.buf }
+    capacity { c.capacity }
 {
     c.r = 0;
     c.w = 0;
